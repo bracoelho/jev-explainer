@@ -590,6 +590,9 @@ mtext.sc{font-weight:700;font-family:var(--mono);font-size:.95em}
 .disc{font-size:.8rem;color:var(--muted);border:1px dashed var(--line);border-radius:var(--radius,3px);padding:6px 10px;max-width:none}
 .disc a,.sitefoot a{color:var(--accent)}
 .sitefoot{border-top:1px solid var(--line);margin-top:20px}
+.tour{margin:0;display:flex;flex-direction:column;gap:8px}
+.tour video{display:block;width:100%;aspect-ratio:16/9;background:var(--bg);border:1px solid var(--line);border-radius:var(--radius,3px)}
+.tour figcaption{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
 .sfin{max-width:860px;margin:0 auto;padding:20px 20px 40px;display:flex;flex-direction:column;gap:6px;font-size:.8rem;color:var(--muted)}
 .sfin p{max-width:none}
 .note{border-left:3px solid var(--base);background:var(--base-soft);padding:12px 16px;border-radius:0 var(--radius) var(--radius) 0;font-size:.95rem}
@@ -631,6 +634,14 @@ th{font-weight:600;color:var(--muted);font-size:.8rem;text-transform:uppercase;l
     <p class="disc">Independent, unofficial explainer. Not affiliated with or endorsed by TypeSafe AI. Content checked against <a href="https://docs.typesafe.ai/">docs.typesafe.ai</a> on 5 October 2026; interactive values are simulated unless marked as docs examples. Checked against real Jev (<code>typesafe/jev-1.13-20260917</code>) the same day: field names and confidence formulas match, values within 0.05 of the docs. Rerun it with <a href="https://github.com/bracoelho/jev-explainer/tree/main/tools">tools/validate_jev.py</a>.</p>
     <p class="lede">Jev doesn't write text. Your code sends it a piece of text and a <b>typed question</b>; it returns a <b>typed answer with probabilities</b>. This page explains the three question types, how each one measures its confidence, and how to turn that into decisions.</p>
   </div>
+
+  <figure class="tour">
+    <video controls preload="none" playsinline poster="docs/tour-poster.jpg" aria-label="70-second tour of the explainer: Noul, Choice, the blind spot, Score and How to use">
+      <source src="docs/jev-teaser.mp4" type="video/mp4">
+      <a href="docs/jev-teaser.mp4">Watch the 70-second tour (MP4)</a>
+    </video>
+    <figcaption>70-second tour · press play, or try every control yourself below</figcaption>
+  </figure>
 
   <div class="iflow" aria-label="How a request flows">
     <div class="ifn"><span class="ifk">1 · you send</span><b>Text</b><small><code>state</code>: a ticket, a message, a document</small></div>
