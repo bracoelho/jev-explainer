@@ -1,0 +1,147 @@
+[
+  {
+    "case": "choice_ticket",
+    "answer": {
+      "type": "choice",
+      "choice": "returns",
+      "probabilities": {
+        "billing": 0.33,
+        "shipping": 0.03,
+        "returns": 0.64
+      },
+      "confidence": 0.46
+    },
+    "check": {
+      "confidence_recomputed": 0.46
+    },
+    "model": "typesafe/jev-1.13-20260917",
+    "usage": {
+      "input_tokens": 372,
+      "output_tokens": 38,
+      "cost": 1.5624e-05
+    }
+  },
+  {
+    "case": "score_pdf",
+    "answer": {
+      "type": "score",
+      "score": 1.11,
+      "legend": {
+        "0": "Cosmetic; no impact to functionality",
+        "1": "Broken or degraded feature, but workaround exists",
+        "2": "Blocking issue; no workaround exists"
+      },
+      "probabilities": {
+        "0": 0,
+        "1": 0.89,
+        "2": 0.11
+      },
+      "confidence": 0.83
+    },
+    "check": {
+      "confidence_recomputed": 0.835
+    },
+    "model": "typesafe/jev-1.13-20260917",
+    "usage": {
+      "input_tokens": 345,
+      "output_tokens": 20,
+      "cost": 1.449e-05
+    }
+  },
+  {
+    "case": "noul_0",
+    "answer": {
+      "type": "noul",
+      "noul": 0.03
+    },
+    "check": {
+      "confidence_optional": 0.94
+    },
+    "model": "typesafe/jev-1.13-20260917",
+    "usage": {
+      "input_tokens": 281,
+      "output_tokens": 25,
+      "cost": 1.1802e-05
+    }
+  },
+  {
+    "case": "noul_1",
+    "answer": {
+      "type": "noul",
+      "noul": 0.07
+    },
+    "check": {
+      "confidence_optional": 0.86
+    },
+    "model": "typesafe/jev-1.13-20260917",
+    "usage": {
+      "input_tokens": 282,
+      "output_tokens": 25,
+      "cost": 1.1844e-05
+    }
+  },
+  {
+    "case": "noul_2",
+    "answer": {
+      "type": "noul",
+      "noul": 0.27
+    },
+    "check": {
+      "confidence_optional": 0.46
+    },
+    "model": "typesafe/jev-1.13-20260917",
+    "usage": {
+      "input_tokens": 285,
+      "output_tokens": 25,
+      "cost": 1.197e-05
+    }
+  },
+  {
+    "case": "noul_3",
+    "answer": {
+      "type": "noul",
+      "noul": 0.35
+    },
+    "check": {
+      "confidence_optional": 0.3
+    },
+    "model": "typesafe/jev-1.13-20260917",
+    "usage": {
+      "input_tokens": 280,
+      "output_tokens": 25,
+      "cost": 1.176e-05
+    }
+  },
+  {
+    "case": "noul_4",
+    "answer": {
+      "type": "noul",
+      "noul": 0.86
+    },
+    "check": {
+      "confidence_optional": 0.72
+    },
+    "model": "typesafe/jev-1.13-20260917",
+    "usage": {
+      "input_tokens": 287,
+      "output_tokens": 25,
+      "cost": 1.2054e-05
+    }
+  },
+  {
+    "case": "noul_5",
+    "answer": {
+      "type": "noul",
+      "noul": 0.99
+    },
+    "check": {
+      "confidence_optional": 0.98
+    },
+    "model": "typesafe/jev-1.13-20260917",
+    "usage": {
+      "input_tokens": 292,
+      "output_tokens": 25,
+      "cost": 1.2264e-05
+    }
+  }
+]

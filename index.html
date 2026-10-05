@@ -1,0 +1,1868 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="An interactive, independent explainer of how TypeSafe's Jev model answers Noul, Choice and Score questions, and how it measures confidence.">
+<style>
+:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+body{margin:0}
+img{max-width:100%}
+[hidden]{display:none!important}
+</style>
+<title>Jev Confidence Explained</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400..600;1,6..72,400..500&family=Public+Sans:wght@400;500;600&family=Spline+Sans+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one reading column; each primitive is a "bench" — formula, live instrument, worked example */
+/* tenure-v3 Normal tokens (values from tenure/tokens.css). Old names kept so no component changes. */
+:root{
+  color-scheme:dark;
+  --bg:#161B26; --surface:#1E2431; --fg:#E9EAE7; --muted:#9BA3AF; --line:#2E3542;
+  --accent:#D68A96; --accent-soft:#3B3441; --accent-ink:#2A1218;
+  --base:#8FAEC9; --base-soft:#303A49;
+  --good:#7FB89C; --warn:#C4A970; --bad:#5B6576; --lo-text:#9BA3AF; --wrong:#D08A7E;
+  --code-bg:#161B26; --code-str:#E9EAE7; --code-kw:#9BA3AF;
+  --display:"Newsreader", "Iowan Old Style", Georgia, serif;
+  --body:"Public Sans", "Helvetica Neue", Arial, sans-serif;
+  --mono:"Spline Sans Mono", "SF Mono", Menlo, monospace;
+  --radius:3px;
+}
+@media print{:root{
+  color-scheme:light;
+  --bg:#FFFFFF; --surface:#FBFBFC; --fg:#1B2130; --muted:#555E6E; --line:#D9DCE1;
+  --accent:#7D2A38; --accent-soft:#F3E3E6; --accent-ink:#FFFFFF;
+  --base:#37536B; --base-soft:#E3EAF0;
+  --good:#2E6B4F; --warn:#8A7346; --bad:#8A929E; --lo-text:#555E6E; --wrong:#9A3B2E;
+  --code-bg:#FBFBFC; --code-str:#1B2130; --code-kw:#555E6E;
+}}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:17px;line-height:1.65}
+.wrap{max-width:860px;margin:0 auto;padding-inline:20px;padding-block:40px 80px;display:flex;flex-direction:column;gap:56px}
+h1,h2,h3{font-family:var(--display);text-wrap:balance;line-height:1.15;margin:0}
+h1{font-size:clamp(2rem,5vw,2.8rem);font-weight:600}
+h2{font-size:1.7rem;font-weight:600}
+h3{font-size:1.1rem;font-weight:600}
+p{margin:0;max-width:66ch}
+.eyebrow{font-family:var(--mono);font-size:.75rem;letter-spacing:.14em;text-transform:uppercase;color:var(--accent)}
+.lede{font-size:1.1rem;color:var(--muted)}
+section{display:flex;flex-direction:column;gap:18px}
+.formula{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:18px;overflow-x:auto;font-size:1.25rem;text-align:center}
+.formula math{font-size:1.25em}
+.legend{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;font-size:.92rem;color:var(--muted)}
+.legend b{font-family:var(--mono);font-weight:500;color:var(--fg)}
+.bench{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:20px;display:flex;flex-direction:column;gap:16px}
+.toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.toolbar span{font-size:.85rem;color:var(--muted);margin-right:4px}
+button{font:500 .85rem var(--body);background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:var(--radius);padding:6px 12px;cursor:pointer}
+button:hover{border-color:var(--accent)}
+button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+button.on{background:var(--accent);color:var(--surface);border-color:var(--accent)}
+.rows{display:flex;flex-direction:column;gap:10px}
+.row{display:grid;grid-template-columns:minmax(80px,140px) 1fr 56px;gap:12px;align-items:center}
+.row label{font-size:.9rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.row label small{display:block;color:var(--muted);font-size:.72rem;white-space:normal;line-height:1.25}
+.track{position:relative;height:26px;background:var(--bg);border-radius:var(--radius);overflow:hidden}
+.fill{position:absolute;inset:0 auto 0 0;background:var(--accent-soft);border-right:2px solid var(--accent)}
+.row.top .fill{background:var(--accent)}
+.track input{position:absolute;inset:0;width:100%;margin:0;opacity:0;cursor:ew-resize}
+.unif{position:absolute;top:0;bottom:0;width:0;border-left:2px dashed var(--base)}
+.val{font-family:var(--mono);font-variant-numeric:tabular-nums;text-align:right;font-size:.9rem}
+.dist{font-family:var(--mono);font-size:.72rem;color:var(--muted)}
+.calc{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:.9rem;background:var(--bg);border-radius:var(--radius);padding:12px 14px;overflow-x:auto;white-space:pre;line-height:1.7}
+.mcalc{background:var(--bg);border-radius:var(--radius);padding:16px 18px;overflow-x:auto;display:flex;flex-direction:column;gap:14px}
+math{font-family:math,"STIX Two Math","Cambria Math","Latin Modern Math",serif}/* lint-ignore: MathML needs a maths font */
+.mcalc math[display="block"],.formula math{font-size:1.2rem;margin:0}
+.legend math,.refresher math,.ex math,.note math,td math,p math{font-size:1.1em}
+section > math[display="block"]{font-size:1.15rem;margin:6px 0}
+.ex math[display="block"]{font-size:1rem;margin:6px 0;max-width:100%;overflow-x:auto;overflow-y:hidden}
+.alt math,.facts math{math-style:normal}
+.lab math{font-size:.8rem}
+.legend b{display:flex;align-items:center}
+.mcalc mtd{padding:6px 2px;math-style:normal}
+.mcalc mtd:first-child,.ex mtd:first-child{text-align:right}.mcalc mtd:nth-child(2),.ex mtd:nth-child(2){text-align:center}.mcalc mtd:last-child,.ex mtd:last-child{text-align:left}
+mn.ka,mi.ka{color:var(--accent)} mn.kb,mi.kb{color:var(--base)} mn.res{color:var(--accent);font-weight:700}
+.facts{display:flex;flex-wrap:wrap;gap:6px 22px;font-size:1.05rem;padding-bottom:10px;border-bottom:1px solid var(--line)}
+.fboxes{display:flex;flex-wrap:wrap;gap:10px}
+.fbox{display:flex;flex-direction:column;gap:4px;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:8px 14px;min-width:0}
+.fbox > span{font-size:.7rem;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);white-space:nowrap}
+.fbox math{font-size:1.15rem;math-style:normal}
+.fbox.ka{border-color:var(--accent);border-left:4px solid var(--accent)}
+.fbox.kc{border-color:var(--accent);background:var(--accent-soft)}
+.fbox.kc.hi{border-color:var(--good);background:color-mix(in srgb,var(--good) 13%,var(--surface))}
+.fbox.kc.mid{border-color:var(--warn);background:color-mix(in srgb,var(--warn) 13%,var(--surface))}
+.fbox.kc.lo{border-color:var(--bad);background:color-mix(in srgb,var(--bad) 13%,var(--surface))}
+.fbox.kc.hi mn.res{color:var(--good)} .fbox.kc.mid mn.res{color:var(--warn)} .fbox.kc.lo mn.res{color:var(--lo-text)}
+.fold{border-radius:var(--radius);background:var(--bg)}
+.fold > summary{cursor:pointer;list-style:none;display:flex;align-items:center;gap:10px;padding:12px 16px;font-weight:600;font-size:.92rem}
+.fold > summary::-webkit-details-marker{display:none}
+.fold > summary::before{content:"";width:7px;height:7px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(-45deg);transition:transform .15s}
+.fold[open] > summary::before{transform:rotate(45deg)}
+.fold > summary span{font-weight:400;color:var(--muted);font-size:.85rem}
+.fold > summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:var(--radius)}
+.fold > .mcalc{padding-top:4px}
+.fbox.kb{border-color:var(--base);border-left:4px solid var(--base)}
+#cCalc > math[display="block"],#t-cCalc > math[display="block"]{font-size:1.3rem;padding-block:6px}
+.alt{display:flex;flex-wrap:wrap;align-items:center;gap:8px 22px;font-size:1rem;padding-top:10px;border-top:1px solid var(--line);color:var(--muted)}
+.alt > span{font-size:.8rem;text-transform:uppercase;letter-spacing:.06em}
+.clamp{font-family:var(--body);font-size:.8rem;color:var(--lo-text);margin-left:8px}
+.result{display:flex;flex-wrap:wrap;align-items:center;gap:16px}
+.big{font-family:var(--mono);font-size:2.2rem;font-weight:500;font-variant-numeric:tabular-nums;line-height:1}
+.pill{font-size:.78rem;font-weight:600;padding:3px 10px;border-radius:var(--radius);border:1px solid currentColor}
+.hi{color:var(--good)} .mid{color:var(--warn)} .lo{color:var(--lo-text)}
+.ruler{position:relative;height:54px;margin:4px 8px 0}
+.ruler .axis{position:absolute;left:0;right:0;top:22px;height:6px;background:var(--line);border-radius:var(--radius)}
+.ruler .span{position:absolute;top:22px;height:6px;background:var(--accent-soft)}
+.ruler .seg{position:absolute;top:22px;height:6px;background:var(--accent)}
+.ruler .tick{position:absolute;top:14px;height:22px;border-left:2px solid var(--muted)}
+.ruler .tick.b{border-color:var(--base)}
+.ruler .tick.a{border-color:var(--accent);border-left-width:3px}
+.ruler .lab{position:absolute;top:36px;font-family:var(--mono);font-size:.72rem;transform:translateX(-50%);white-space:nowrap;color:var(--muted)}
+.ruler .lab.t{top:-2px}
+.mapper{display:flex;flex-direction:column;gap:0;padding-block:4px}
+.mtag{font-size:.75rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:0 8px}
+.mtag span{text-transform:none;letter-spacing:0}
+.map{display:block;width:calc(100% - 16px);height:64px;margin:0 8px;overflow:visible}
+.ruler .void{position:absolute;top:22px;height:6px;background:repeating-linear-gradient(135deg,var(--line) 0 3px,transparent 3px 6px)}/* lint-ignore: one-colour hatch, no blend */
+.ruler .vlab{position:absolute;top:2px;font-size:.68rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-left:6px}
+.ruler.conf{height:58px;margin-top:0}
+.ruler.conf .axis,.ruler.conf .seg,.ruler.conf .band{top:6px}
+.ruler.conf .tick{top:-2px}
+.ruler.conf .lab{top:20px}
+.ruler .band{position:absolute;height:6px;opacity:.28}
+.ruler .clab.lo{color:var(--lo-text)}.ruler .clab.mid{color:var(--warn)}.ruler .clab.hi{color:var(--good)}
+.ruler .clab{position:absolute;top:34px;transform:translateX(-50%);white-space:nowrap;font-size:.95rem;color:var(--accent);font-weight:600}
+.defcard{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);background:var(--surface);border:1px solid var(--line);border-radius:var(--radius)}
+.def{padding:18px 20px;border-right:1px solid var(--line);display:flex;flex-direction:column;gap:10px;min-width:0}
+.def blockquote{margin:0;font-family:var(--display);font-size:1.05rem;line-height:1.5;padding-left:14px;border-left:3px solid var(--accent)}
+.def blockquote code{font-family:var(--mono);font-size:.85em;background:var(--bg);padding:1px 5px;border-radius:var(--radius)}
+.shapes{display:flex;flex-wrap:wrap;gap:8px 20px;font-size:.82rem;color:var(--muted)}
+.shapes > span{display:inline-flex;align-items:flex-end;gap:8px}
+.mini{display:inline-flex;align-items:flex-end;gap:2px;height:22px}
+.mini i{display:block;width:7px;background:var(--accent);border-radius:var(--radius) var(--radius) 0 0;min-height:2px}
+.src{font-size:.78rem;color:var(--muted)}
+.defmath{padding:18px 20px;display:flex;flex-direction:column;gap:6px;min-width:0}
+.defmath .formula{border:0;background:none;padding:0;flex:1;display:flex;align-items:center;justify-content:center;overflow-x:auto}
+.defmath .formula math{font-size:1.4rem}
+.symrow{grid-column:1/-1;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border-top:1px solid var(--line);background:var(--bg);border-radius:0 0 var(--radius) var(--radius)}
+.sym{display:flex;align-items:center;gap:14px;padding:14px 20px;min-width:0}
+.sym + .sym{border-left:1px solid var(--line)}
+.sym > math{font-size:1.6rem;flex:none;min-width:2.2rem;text-align:center}
+.sym > span{font-size:.86rem;color:var(--muted);line-height:1.4}
+.sym > span b{display:block;color:var(--fg);font-weight:600;font-size:.82rem;letter-spacing:.04em;text-transform:uppercase;margin-bottom:2px}
+.sym.ka{border-top:3px solid var(--accent)} .sym.kb{border-top:3px solid var(--base)}
+@media (max-width:760px){.symrow{grid-template-columns:minmax(0,1fr)}.sym + .sym{border-left:0;border-top:1px solid var(--line)}}
+@media (max-width:640px){.defcard{grid-template-columns:minmax(0,1fr)}.def{border-right:0;border-bottom:1px solid var(--line)}}
+.tabs{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);border-bottom:1px solid var(--line)}
+.tabsin{max-width:860px;margin:0 auto;padding-inline:20px;display:flex;gap:4px}
+.tabs [role=tab]{border:0;border-radius:0;background:none;padding:14px 14px 12px;font-weight:600;font-size:.92rem;color:var(--muted);border-bottom:3px solid transparent;margin-bottom:-1px;display:inline-flex;align-items:center;gap:8px}
+.tabs [role=tab][aria-selected="true"]{color:var(--fg);border-bottom-color:var(--accent)}
+.tabs [role=tab]:hover{color:var(--fg)}
+.badge{font-family:var(--mono);font-size:.7rem;background:var(--accent-soft);color:var(--accent);border-radius:var(--radius);padding:1px 7px}
+.tbhead{display:flex;flex-direction:column;gap:8px;border:1px dashed var(--line);border-radius:var(--radius);padding:14px 18px}
+.prop{border-top:1px solid var(--line);padding-top:36px}
+.cite{font-size:.8rem;color:var(--muted)} .cite a,.prop a{color:var(--accent)}
+.legendrow{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:.85rem;color:var(--muted)}
+.legendrow span{display:inline-flex;align-items:center;gap:6px}.legendrow i{width:14px;height:3px;border-radius:var(--radius);display:inline-block}
+.p3grid{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:18px;align-items:start}
+.p3side{display:flex;flex-direction:column;gap:12px;min-width:0}
+.cmp{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.cmp .fbox{gap:8px;padding:12px 16px}
+.cmp .fbox small{font-size:.8rem;color:var(--muted);line-height:1.4}
+.cmpv{display:flex;flex-direction:column;gap:2px}
+.cmpm{display:flex;flex-wrap:wrap;gap:4px 16px;font-size:.88rem}
+.inputs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.inputs label{display:flex;flex-direction:column;gap:6px;font-size:.82rem;color:var(--muted)}
+.inputs input{font:500 1rem var(--mono);padding:8px 10px;border:1px solid var(--line);border-radius:var(--radius);background:var(--surface);color:var(--fg);min-width:0}
+.sets{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.setcard{border:1px solid var(--line);border-radius:var(--radius);padding:12px 14px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.sethead{display:flex;justify-content:space-between;gap:8px;font-size:.9rem}.sethead span{color:var(--muted);font-family:var(--mono);font-size:.8rem}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:.85rem;border:1px dashed var(--line);border-radius:var(--radius);padding:3px 10px;color:var(--muted)}
+.chip em{font-style:normal;font-family:var(--mono);font-size:.78rem}
+.chip.in{border:1px solid var(--accent);background:var(--accent-soft);color:var(--fg)}
+.setsize{font-size:.82rem;color:var(--muted)}
+@media (max-width:640px){.p3grid,.cmp,.sets,.inputs{grid-template-columns:minmax(0,1fr)}}
+.exfold{border:1px solid var(--line);background:var(--surface)}
+.exbody{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:18px;padding:4px 18px 18px;align-items:center}
+.exl{display:flex;flex-direction:column;gap:8px;min-width:0}.exl q{font-style:italic;color:var(--muted)}.exl code{font-family:var(--mono);font-size:.85rem}
+.exr{min-width:0;font-size:.92rem}.exr math{font-size:1.1rem}
+.insight{display:grid;grid-template-columns:minmax(0,1fr);gap:18px;background:var(--base-soft);border:1px solid var(--base);border-left:5px solid var(--base);border-radius:var(--radius);padding:20px 22px}
+.insight .eyebrow{color:var(--base)}
+.insight h3{font-size:1.35rem;margin:4px 0 8px}
+.insl{min-width:0}.insl p{font-size:1rem;max-width:none}
+.insr{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;min-width:0}
+.dcard{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px;display:grid;grid-template-columns:auto minmax(0,1fr);grid-template-rows:auto 1fr;column-gap:22px;row-gap:10px;min-width:0}
+.dcard .dhead{grid-column:1/-1}
+.dcard .dist{min-width:150px}
+.dmetrics{display:flex;flex-direction:column;justify-content:center;gap:12px;min-width:0}
+.dconf,.dratio{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px;font-size:.88rem;color:var(--muted)}
+.dconf b,.dratio b{font-family:var(--mono);font-size:1.15rem}
+.dconf b{color:var(--muted)}
+.dratio b{color:var(--base)}
+.dconf span,.dratio span{order:-1;flex-basis:100%;font-size:.72rem;text-transform:uppercase;letter-spacing:.05em}
+.dratio math{font-size:1.05rem;color:var(--fg);math-style:normal}
+@media (max-width:520px){.dcard{grid-template-columns:minmax(0,1fr)}}
+.dhead{font-size:.75rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.dist{display:flex;gap:8px;align-items:flex-end}
+.dcol{display:flex;flex-direction:column;align-items:center;gap:2px;flex:1}
+.dbar{height:56px;width:100%;max-width:26px;display:flex;align-items:flex-end;background:var(--bg);border-radius:var(--radius)}
+.dbar i{display:block;width:100%;background:var(--accent);border-radius:var(--radius) var(--radius) 0 0;min-height:1px}
+.dcol span{font-size:.75rem}.dcol em{font-style:normal;font-family:var(--mono);font-size:.7rem;color:var(--muted)}
+
+@media (max-width:640px){.exbody{grid-template-columns:minmax(0,1fr)}.insr{grid-template-columns:minmax(0,1fr)}}
+.ruler.conf{height:96px}
+.ruler.conf .band{top:6px;height:10px;opacity:.5}
+.ruler.conf .seg{top:9px;height:4px}
+.ruler.conf .axis{display:none}
+.ruler .thr{position:absolute;top:-2px;height:26px;width:3px;margin-left:-1.5px;background:var(--fg);border-radius:var(--radius)}
+.ruler .tlab{position:absolute;top:26px;font-family:var(--mono);font-size:.72rem;transform:translateX(-50%);color:var(--fg);font-weight:500}
+.ruler .bname{position:absolute;top:46px;transform:translateX(-50%);font-size:.72rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:2px 8px;border-radius:var(--radius);border:1px solid transparent;opacity:.75;white-space:nowrap}
+.ruler .bname.on{border-color:currentColor;opacity:1}
+.ruler.conf .clab{top:70px}
+.apifold{border:1px solid var(--line);background:var(--surface)}
+.apibody{display:flex;flex-direction:column;gap:12px;padding:4px 18px 18px;min-width:0}
+.apiflow{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;font-size:.8rem;color:var(--muted)}
+.apiflow .node{border:1px solid var(--line);border-radius:var(--radius);padding:4px 10px;background:var(--bg);color:var(--fg);font-weight:500}
+.apiflow .node.jev{border-color:var(--accent);color:var(--accent)}
+.apiflow .arr{font-family:var(--mono);font-size:.74rem}
+.ctabs{display:flex;flex-wrap:wrap;gap:6px}
+.ctabs [role=tab]{border-radius:var(--radius);font-size:.8rem;padding:6px 10px}
+.ctabs [role=tab][aria-selected="true"]{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+.codewrap{border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;background:var(--code-bg)}
+.codehead{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 12px;border-bottom:1px solid var(--line);font-family:var(--mono);font-size:.72rem;color:var(--muted)}
+.cmeta{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.copy{font-size:.74rem;padding:3px 10px;flex:none}
+pre.code{margin:0;padding:14px 16px;overflow-x:auto;font-family:var(--mono);font-size:.8rem;line-height:1.6;color:var(--fg);max-height:440px}
+pre.code .k{color:var(--accent)} pre.code .s{color:var(--code-str)} pre.code .n{color:var(--base)} pre.code .kw{color:var(--code-kw);font-weight:500} pre.code .c{color:var(--muted);font-style:italic}
+@media (max-width:520px){.apifold > summary span{display:none}.apiflow .arr{display:none}}
+.apinote{font-size:.85rem;color:var(--muted)}
+.symrow.four{grid-template-columns:repeat(4,minmax(0,1fr))}
+.defcard.wide{grid-template-columns:minmax(0,1fr) minmax(0,1.2fr)}
+.defcard.wide .defmath .formula{align-items:safe center;overflow-x:auto}
+.defcard.wide .defmath .formula math{font-size:1.2rem}
+.srcs{display:flex;flex-wrap:wrap;gap:4px 16px}
+.tabsin{overflow-x:auto;scrollbar-width:none}.tabsin::-webkit-scrollbar{display:none}.tabs [role=tab]{flex:none}
+@media (max-width:480px){.tabs [role=tab]{padding:12px 9px 10px;font-size:.86rem}}
+@media (max-width:640px){.defcard.wide{grid-template-columns:minmax(0,1fr)}.defcard.wide .defmath .formula math{font-size:1rem}}
+.symrow.four .sym{padding:14px 16px;gap:12px}
+.def blockquote.q2{font-size:.95rem;border-left-color:var(--base)}
+.defmath .formula{flex-direction:column;gap:4px}
+.opennote{border:1px dashed var(--warn);border-radius:var(--radius);padding:14px 18px;display:flex;flex-direction:column;gap:6px;font-size:.92rem}
+.opennote .eyebrow{color:var(--warn)}
+.opennote p{max-width:none}
+.rows .row label small b{font-weight:600;color:var(--fg)}
+@media (max-width:900px){.symrow.four{grid-template-columns:repeat(2,minmax(0,1fr))}.symrow.four .sym:nth-child(3){border-left:0}.symrow.four .sym:nth-child(n+3){border-top:1px solid var(--line)}}
+@media (max-width:560px){.symrow.four{grid-template-columns:minmax(0,1fr)}.symrow.four .sym + .sym{border-left:0;border-top:1px solid var(--line)}}
+.cases{display:flex;flex-direction:column;gap:14px}
+.caseshead{display:flex;flex-direction:column;gap:6px}.caseshead h3{font-size:1.3rem}.caseshead p{max-width:none}.caseshead math{math-style:normal;font-size:1.05em}
+.cgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.ccard{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.chead{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:.95rem}
+.cgloss{font-size:.85rem;color:var(--muted)}
+.cchart{position:relative;padding-bottom:40px;margin-bottom:6px}
+.ccols{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:4px}
+.ccol{display:flex;flex-direction:column;align-items:center;gap:2px;min-width:0}
+.cbar{height:70px;width:100%;max-width:30px;display:flex;align-items:flex-end;background:var(--bg);border-radius:var(--radius)}
+.cbar i{display:block;width:100%;background:var(--line);border-radius:var(--radius) var(--radius) 0 0;min-height:1px}
+.ccol.pk .cbar i{background:var(--accent)} .ccol.ru .cbar i{background:var(--base)}
+.ccol em{font-style:normal;font-family:var(--mono);font-size:.72rem}
+.ccol span{font-family:var(--mono);font-size:.72rem;font-weight:600}
+.ccol small{font-size:.62rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.cbrk{position:absolute;bottom:2px;height:10px;border:2px solid var(--base);border-top:0;border-radius:0 0 var(--radius) var(--radius)}
+.cbrk span{position:absolute;left:50%;top:10px;transform:translateX(-50%);font-size:.7rem;font-weight:600;color:var(--base);white-space:nowrap;background:var(--surface);padding:0 4px}
+.cmath{display:flex;flex-direction:column;gap:6px;font-size:1rem;background:var(--bg);border-radius:var(--radius);padding:10px 12px;overflow-x:auto}
+.cmath math{math-style:normal}
+.cclamp{font-size:.78rem;color:var(--lo-text)}
+.cfoot{display:flex;flex-direction:column;gap:3px;font-size:.82rem;color:var(--muted)}
+.cfoot b{font-family:var(--mono);color:var(--fg)} .cfoot b.hi{color:var(--good)} .cfoot b.mid{color:var(--warn)} .cfoot b.lo{color:var(--lo-text)}
+.cnote{font-size:.95rem;max-width:none;border-left:3px solid var(--base);padding-left:12px}
+@media (max-width:760px){.cgrid{grid-template-columns:minmax(0,1fr)}.cgloss{min-height:0}}
+.symrow.four .sym{flex-direction:column;align-items:flex-start;justify-content:flex-start;gap:8px;padding:16px 18px}
+.symrow.four .sym > span{display:contents}
+.symrow.four .sym > span b{order:-2;margin:0;font-size:.74rem;letter-spacing:.06em}
+.symrow.four .sym > math{order:-1;font-size:1.55rem;min-width:0;text-align:left;min-height:2.2rem;display:flex;align-items:center}
+.symrow.four .sym{font-size:.84rem;color:var(--muted);line-height:1.45}
+.symrow.four .sym > math{color:var(--fg)}
+mtext.kb{color:var(--base)} mtext.ka{color:var(--accent)}
+.intuit{border:1px solid var(--accent);border-left:5px solid var(--accent);background:var(--surface);border-radius:var(--radius);padding:18px 22px;display:flex;flex-direction:column;gap:12px}
+.intuit h3{font-size:1.3rem}
+.iq{font-size:1.08rem;max-width:none}
+.ianchors{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.ia{display:flex;flex-direction:column;gap:6px;border:1px solid var(--line);border-top:3px solid currentColor;border-radius:var(--radius);padding:10px 12px;font-size:.86rem;color:var(--muted);min-width:0}
+.ia.hi{border-top-color:var(--good)}.ia.mid{border-top-color:var(--warn)}.ia.lo{border-top-color:var(--bad)}
+.ia .iak{font-size:1.1rem;color:var(--fg)}
+.ia b{font-size:.9rem}.ia.hi b{color:var(--good)}.ia.mid b{color:var(--warn)}.ia.lo b{color:var(--lo-text)}
+.idef{display:grid;grid-template-columns:minmax(0,1fr);gap:14px;background:var(--base-soft);border-radius:var(--radius);padding:14px 16px;align-items:start}
+.idtext{display:flex;flex-direction:column;gap:8px;font-size:.92rem;min-width:0}
+.idtext h4{margin:0;font-family:var(--display);font-size:1.02rem;color:var(--base)}
+.kbt{color:var(--base)}
+.ucards{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.3fr);gap:12px;min-width:0}
+.idtext p{max-width:none}
+.ucard .umath{margin-top:auto}
+.ucard{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:10px 12px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.uhead{font-size:.72rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.ucols{display:flex;gap:4px}
+.ucol{flex:1;display:flex;flex-direction:column;align-items:center;gap:1px;min-width:0}
+.ubar{height:40px;width:100%;max-width:24px;display:flex;align-items:flex-end;background:var(--bg);border-radius:var(--radius)}
+.ubar i{display:block;width:100%;background:var(--base);opacity:.75;border-radius:var(--radius) var(--radius) 0 0}
+.ucol em{font-style:normal;font-family:var(--mono);font-size:.64rem;color:var(--muted)}
+.ucol span{font-family:var(--mono);font-size:.7rem;font-weight:600}
+.ucol b{font-family:var(--mono);font-size:.72rem;color:var(--base)}
+.ulegend{display:flex;flex-wrap:wrap;gap:2px 10px;font-size:.66rem;color:var(--muted)}
+.ulegend span:last-child{color:var(--base)}
+.umath{font-size:.98rem;overflow-x:auto}.umath math{math-style:normal}
+@media (max-width:760px){.ianchors,.idef,.ucards{grid-template-columns:minmax(0,1fr)}}
+.subhead{display:flex;flex-direction:column;gap:4px;border-top:2px solid var(--fg);padding-top:16px;margin-top:14px}
+.subhead h3{font-size:1.6rem;font-weight:600}
+.subline{font-size:1.02rem;color:var(--muted);max-width:none}
+details.intuit{padding:0}
+details.intuit > summary{cursor:pointer;list-style:none;display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 14px;padding:16px 22px}
+details.intuit > summary::-webkit-details-marker{display:none}
+details.intuit > summary::before{content:"";align-self:center;width:8px;height:8px;border-right:2px solid var(--accent);border-bottom:2px solid var(--accent);transform:rotate(-45deg);transition:transform .15s}
+details.intuit[open] > summary::before{transform:rotate(45deg)}
+details.intuit .ititle{font-family:var(--display);font-size:1.2rem;font-weight:600}
+details.intuit > summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:var(--radius)}
+.ibody{display:flex;flex-direction:column;gap:12px;padding:0 22px 20px}
+.caselead{display:flex;flex-direction:column;gap:8px}.caselead p{max-width:none}.caselead math{math-style:normal;font-size:1.05em}
+.fields{display:flex;flex-direction:column;gap:10px}
+.fieldshead{display:flex;flex-direction:column;gap:4px}.fieldshead p{max-width:none;font-size:.95rem;color:var(--muted)}
+.fgrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.ftile{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:12px 14px;display:flex;flex-direction:column;gap:6px;min-width:0;font-size:.84rem;color:var(--muted);line-height:1.45}
+.ftile code{font-family:var(--mono);font-size:.82rem;color:var(--fg);background:var(--bg);align-self:flex-start;padding:2px 7px;border-radius:var(--radius)}
+.ftile b{color:var(--fg);font-size:.8rem;text-transform:uppercase;letter-spacing:.05em}
+.fval{font-family:var(--mono);font-size:1.35rem;color:var(--fg);height:3.4rem;display:flex;align-items:center;gap:10px}
+.fval small{font-size:.72rem;color:var(--muted)}
+.fval.small{font-size:.7rem;line-height:1.4;color:var(--muted);align-items:center}
+.ftile.on{border-color:var(--accent);border-top:3px solid var(--accent)}
+.ftile.on .fval{color:var(--accent)}
+.fmini{display:inline-flex;align-items:flex-end;gap:3px;height:30px}
+.fmini i{display:block;width:9px;background:var(--accent);border-radius:var(--radius) var(--radius) 0 0;min-height:2px}
+@media (max-width:760px){.fgrid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:420px){.fgrid{grid-template-columns:minmax(0,1fr)}}
+.ftile.mine{border-style:dashed;background:transparent}
+.ftile.mine code{background:transparent;border:1px dashed var(--line)}
+.ftile.mine .fval{color:var(--base)}
+.ftile.mine b{color:var(--base)}
+.ftile code + .fval,.ftile span code{}
+.ftile span code{font-size:.78rem;padding:0 4px;background:var(--bg);border-radius:var(--radius)}
+.cfoot .cmp{margin-top:6px;padding-top:8px;border-top:1px solid var(--line);font-size:.74rem;font-weight:600;color:var(--muted)}
+.ccard .cfoot{margin-top:auto}
+.frowlab{font-size:.72rem;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+#k-sFacts{gap:8px}
+#k-sFacts .fboxes + .frowlab{margin-top:6px}
+.fbox.ks{border:2px solid var(--fg);background:var(--surface)}
+.fbox.ks span{color:var(--fg);font-weight:600}
+mn.sc{font-weight:700;font-size:1.15em}
+.dfield{display:flex;flex-direction:column;gap:6px}
+.dfield > code{align-self:flex-start;font-family:var(--mono);font-size:.78rem;padding:2px 8px;border-radius:var(--radius);border:1px solid var(--line)}
+.dfield > code.ks{border:2px solid var(--fg);color:var(--fg)}
+.dfield > code.kc{border-color:var(--accent);color:var(--accent)}
+.def blockquote.qs{border-left-color:var(--fg)}
+.defmath .formula.ftop{justify-content:flex-start;padding-top:6px}
+.defmath .formula .flab{align-self:flex-start;font-family:var(--mono);font-size:.78rem;padding:2px 8px;border-radius:var(--radius);border:1px solid var(--line);margin-top:14px}
+.defmath .formula .flab.ks{border:2px solid var(--fg);color:var(--fg)}
+.defmath .formula .flab.kc{border-color:var(--accent);color:var(--accent)}
+.defmath .formula .flab:first-child{margin-top:0}
+mtext.ks{font-weight:600}
+.tlab2{font-size:.78rem !important;font-weight:600;color:var(--muted);min-width:9.5em}
+.sbarwrap{margin-top:18px;padding-top:14px;border-top:1px dashed var(--line);display:flex;flex-direction:column;gap:6px}
+.sbar{position:relative;height:132px;margin:0 26px}
+.sbaxis{position:absolute;left:0;right:0;top:86px;height:3px;background:var(--fg);opacity:.35;border-radius:var(--radius)}
+.sbcol{position:absolute;top:28px;width:0;display:flex;flex-direction:column;align-items:center}
+.sbcol > *{flex:none}
+.sbb{width:22px;height:56px;display:flex;align-items:flex-end}
+.sbb i{display:block;width:100%;background:var(--muted);opacity:.55;border-radius:var(--radius) var(--radius) 0 0;min-height:1px}
+.sbcol.pk .sbb i{opacity:1}
+@media (prefers-reduced-motion:no-preference){.sbb i{transition:height .15s}.sbmark{transition:left .2s ease}}
+.sbcol.pk .sbb i{background:var(--accent)}
+.sbtick{width:2px;height:8px;background:var(--muted);margin-top:2px}
+.sbn{font-family:var(--mono);font-size:.72rem;font-weight:600;margin-top:2px}
+.sbl{font-size:.66rem;color:var(--muted);white-space:nowrap}
+.sbcol.pk .sbn,.sbcol.pk .sbl{color:var(--accent)}
+.sbmark{position:absolute;top:0;width:0}
+.sbline{position:absolute;left:-1px;top:22px;width:2px;height:66px;background:var(--fg)}
+.sbtri{position:absolute;left:-7px;top:88px;width:0;height:0;border-left:7px solid transparent;border-right:7px solid transparent;border-bottom:10px solid var(--fg)}
+.sblab{position:absolute;top:0;white-space:nowrap;font-size:.85rem;color:var(--fg);display:flex;gap:8px;align-items:baseline}
+.sblab b{font-family:var(--mono);font-size:1rem}
+.sblab em{font-style:normal;color:var(--muted);font-size:.78rem}
+.sbwarn{font-size:.74rem;font-weight:600;color:var(--warn);border:1px solid currentColor;border-radius:var(--radius);padding:0 8px}
+.sbmark.far .sbline{background:var(--warn)}.sbmark.far .sbtri{border-bottom-color:var(--warn)}
+@media (max-width:520px){.sblab em{display:none}.sbl{font-size:.58rem}}
+.wtbl table{font-size:.95rem}
+.wtbl th[scope],.wtbl tbody th{font-size:.8rem;font-weight:600;color:var(--muted);white-space:nowrap;text-transform:none;letter-spacing:0;width:22%}
+.wtbl thead th{padding-bottom:10px}
+.wtbl td{width:39%}
+.wtbl code,.wcard code{font-family:var(--mono);font-size:.85em;background:var(--bg);padding:1px 5px;border-radius:var(--radius)}
+.wtag{display:inline-block;font-family:var(--mono);font-size:.8rem;font-weight:600;padding:2px 10px;border-radius:var(--radius);border:1.5px solid currentColor;text-transform:none;letter-spacing:0}
+.wtag.c{color:var(--accent)} .wtag.s{color:var(--fg)}
+.wgrid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.wgrid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.wcard{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:16px;display:flex;flex-direction:column;gap:10px;min-width:0;font-size:.92rem}
+.wcard h4{margin:0;font-family:var(--display);font-size:1.05rem;line-height:1.3}
+.wcard p{max-width:none}
+.wcard.bad{border-top:3px solid var(--wrong)}
+.wnum{font-family:var(--mono);font-size:.8rem;font-weight:600;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:var(--fg);color:var(--bg)}
+.wpair{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.wex{border-radius:var(--radius);padding:8px 10px;display:flex;flex-direction:column;gap:2px;font-size:.8rem;color:var(--muted);border:1px solid var(--line)}
+.wex b{color:var(--fg);font-size:.82rem}
+.wex.s{border-left:3px solid var(--fg)} .wex.c{border-left:3px solid var(--accent)}
+.wtagrow{font-size:.85rem;color:var(--muted);display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.wpairbars{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.wpairbars > div{display:flex;flex-direction:column;gap:4px;background:var(--bg);border-radius:var(--radius);padding:8px}
+.wpairbars small{font-size:.74rem;color:var(--muted)}
+.wbars{display:flex;gap:4px;align-items:flex-end}
+.wcol{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;min-width:0}
+.wbar{height:44px;width:100%;max-width:22px;display:flex;align-items:flex-end;background:var(--surface);border-radius:var(--radius)}
+.wbar i{display:block;width:100%;background:var(--accent);border-radius:var(--radius) var(--radius) 0 0;min-height:1px}
+.wcol span{font-family:var(--mono);font-size:.62rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.wbars.wide .wbar{max-width:30px}
+.wedges{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.wedge{border-left:3px solid var(--warn);padding:4px 0 4px 14px;display:flex;flex-direction:column;gap:6px;font-size:.92rem}
+.wedge h4{margin:0;font-family:var(--display);font-size:1rem}
+.wedge p{max-width:none;color:var(--muted)}
+@media (max-width:760px){.wgrid3,.wgrid2,.wedges{grid-template-columns:minmax(0,1fr)}}
+.pcap{border-left:3px solid var(--accent);background:var(--accent-soft);border-radius:0 var(--radius) var(--radius) 0;padding:10px 14px;display:flex;flex-direction:column;gap:6px;font-size:.9rem}
+.pcap q{font-style:italic;color:var(--muted)}
+.pcap p{max-width:none}
+#t-cFacts{gap:8px}
+#t-cFacts .fboxes + .frowlab{margin-top:6px}
+.fbox.mine{border-style:dashed;background:transparent}
+mtext.sc{font-weight:700;font-family:var(--mono);font-size:.95em}
+.fnote{font-size:.78rem;color:var(--muted);max-width:none;margin-top:-2px}
+.cchart.cfl{padding-bottom:6px}
+.cfl .ccols{position:relative;z-index:1}
+.cfl .ccol small{font-size:.62rem}
+.cfloor{position:absolute;left:0;right:0;top:calc(70px * (1 - var(--fl)));border-top:2px dashed var(--base);z-index:2;pointer-events:none}
+.cfloor span{position:absolute;right:0;top:-20px;font-size:.68rem;color:var(--base);background:var(--surface);padding:0 4px;font-weight:600}
+.cfloor span math{font-size:.95em}
+.symrow.four.three{grid-template-columns:repeat(3,minmax(0,1fr))}
+@media (max-width:900px){.symrow.four.three{grid-template-columns:repeat(3,minmax(0,1fr))}.symrow.four.three .sym:nth-child(n+3){border-top:0}.symrow.four.three .sym:nth-child(3){border-left:1px solid var(--line)}}
+@media (max-width:560px){.symrow.four.three{grid-template-columns:minmax(0,1fr)}.symrow.four.three .sym:nth-child(3){border-left:0;border-top:1px solid var(--line)}}
+.fnote{text-align:left;align-self:flex-start}
+.symrow.four .sym .sd{display:block}
+.def blockquote.q3{font-size:.95rem;border-left-color:var(--fg);opacity:.85}
+.vmini{font-size:1.05rem;overflow-x:auto}.vmini math{math-style:normal}
+.vnote{font-size:.8rem;color:var(--muted)}
+.rplot{display:flex;flex-direction:column;gap:8px;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px}
+.rrow{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr) 44px;gap:14px;align-items:center}
+.rrow q{font-style:italic;font-size:.88rem;color:var(--fg);min-width:0}
+.rtrack{position:relative;height:18px;border-bottom:2px solid var(--line)}
+.rhalf{position:absolute;left:50%;top:-4px;bottom:-2px;border-left:2px dashed var(--base)}
+.rdot{position:absolute;top:3px;width:14px;height:14px;margin-left:-7px;border-radius:50%;background:var(--muted);border:2px solid var(--surface)}
+.rdot.y{background:var(--accent)}
+.rval{font-family:var(--mono);font-size:.9rem;text-align:right}
+.tcard .tchip{white-space:nowrap;font-family:var(--mono);font-size:.78rem;border:1.5px solid var(--fg);border-radius:var(--radius);padding:1px 9px}
+.ttrack{position:relative;height:34px;margin:14px 6px 4px;border-bottom:2px solid var(--line)}
+.tdot{position:absolute;bottom:4px;width:12px;height:12px;margin-left:-6px;border-radius:50%;background:var(--muted);opacity:.6}
+.tdot.y{background:var(--accent);opacity:1}
+.tline{position:absolute;top:-6px;bottom:-4px;border-left:2px solid var(--fg)}
+.tline span{position:absolute;top:-14px;left:4px;font-family:var(--mono);font-size:.7rem;font-weight:600}
+.tlab0,.tlab1{position:absolute;bottom:-18px;font-family:var(--mono);font-size:.66rem;color:var(--muted)}
+.tlab0{left:-3px}.tlab1{right:-3px}
+.tlist{list-style:none;margin:12px 0 0;padding:0;display:flex;flex-direction:column;gap:4px;font-size:.78rem;color:var(--muted)}
+.tlist li{display:grid;grid-template-columns:34px 1fr;gap:6px;align-items:baseline}
+.tlist li span{font-family:var(--mono)}
+.tlist li.y{color:var(--fg);font-weight:600}.tlist li.y span{color:var(--accent)}
+.tfill{background:var(--line) !important;border-right-color:var(--fg) !important}
+.row label small{display:block;color:var(--muted);font-size:.72rem}
+.thrt{position:absolute;top:25px;height:30px;border-left:2px dashed var(--fg);z-index:3}
+.thrt span{position:absolute;top:30px;transform:translateX(-50%);left:0 !important;left:4px;font-family:var(--mono);font-size:.68rem;font-weight:600;white-space:nowrap;background:var(--surface);padding:0 2px}
+#u-ruler{height:80px}
+#u-facts{gap:8px}#u-facts .fboxes + .frowlab{margin-top:6px}
+.big.yesv{color:var(--good)} .big.nov{color:var(--muted)}
+.kq{display:flex;justify-content:space-between;align-items:center;gap:8px;grid-column:1/-1;font-size:.85rem}
+.kq code{font-family:var(--mono);font-size:.8rem;background:var(--bg);padding:2px 6px;border-radius:var(--radius)}
+.kv{font-family:var(--mono);font-size:1.1rem}.kv.hi{color:var(--good)}.kv.mid{color:var(--warn)}.kv.lo{color:var(--lo-text)}
+.kread{grid-column:1/-1;font-size:.85rem;color:var(--muted);max-width:none;margin-top:4px}.kread b{color:var(--fg)}
+.kq ~ .dmetrics{grid-column:1/-1;flex-direction:row;flex-wrap:wrap;gap:12px 28px}
+@media (max-width:640px){.rrow{grid-template-columns:minmax(0,1fr) 44px}.rrow .rtrack{grid-column:1/-1;grid-row:2}}
+.mapper + .pcap{margin-top:14px}
+.pcap{transition:background .2s,border-color .2s,opacity .2s;border-left-color:var(--good);background:color-mix(in srgb,var(--good) 12%,var(--surface))}
+.pcap .eyebrow{color:var(--good)}
+.caphead{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:4px 12px}
+.capstat{font-size:.75rem;font-weight:600}
+.capstat .on{color:var(--good)} .capstat .offt{display:none;color:var(--muted);font-weight:500}
+.pcap.off{border-left-color:var(--line);background:var(--bg)}
+.pcap.off .eyebrow{color:var(--muted)}
+.pcap.off q,.pcap.off p{opacity:.5}
+.pcap.off .capstat .on{display:none}.pcap.off .capstat .offt{display:inline}
+.qcard{border:1px solid var(--line);border-left:4px solid var(--good);background:var(--surface);border-radius:0 var(--radius) var(--radius) 0;padding:12px 16px;display:flex;flex-direction:column;gap:8px;transition:border-color .2s}
+.qcard .eyebrow{color:var(--good)}
+.qsep{font-size:.68rem;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-top:4px}
+.qsep + .qrow{border-top:0;padding-top:0}
+.qrow{display:grid;grid-template-columns:110px minmax(0,1fr) auto;gap:12px;align-items:baseline;padding-top:8px;border-top:1px solid var(--line);font-size:.9rem}
+.qrow > code{font-family:var(--mono);font-size:.8rem;background:var(--bg);padding:2px 7px;border-radius:var(--radius);justify-self:start}
+.qrow div code{font-family:var(--mono);font-size:.8em;background:var(--bg);padding:0 4px;border-radius:var(--radius)}
+.qq{font-family:var(--display);font-size:1.1rem;font-weight:600}
+.qrow q{font-style:italic}
+.qtag{font-size:.7rem;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);border:1px solid var(--line);border-radius:var(--radius);padding:1px 8px;white-space:nowrap}
+.qtag.req{color:var(--fg);border-color:var(--fg)}
+.qopt{color:var(--muted)}.qopt > code{border:1px dashed var(--line);background:transparent}
+.qans > code{border:2px solid var(--fg);background:var(--surface)}
+.qval{font-family:var(--mono);font-size:1.2rem;color:var(--accent)}
+.qcard.off{border-left-color:var(--line)}
+.qcard.off .eyebrow{color:var(--muted)}
+.qcard.off q{opacity:.5}
+.qcard.off .capstat .on{display:none}.qcard.off .capstat .offt{display:inline}
+@media (max-width:560px){.qrow{grid-template-columns:minmax(0,1fr) auto}.qrow > div{grid-column:1/-1;grid-row:2}}
+.wtag.n{color:var(--base)}
+.wtbl td{width:auto}.wtbl tbody th{width:16%}
+.golink{align-self:flex-start;margin-top:10px;font-weight:600;background:var(--surface);border:1.5px solid var(--base);color:var(--base);border-radius:var(--radius);padding:7px 14px}
+.golink:hover{background:var(--base);color:var(--surface)}
+#w-ex1{scroll-margin-top:70px}
+.exsteps{display:flex;flex-direction:column;gap:14px}
+.exstep{position:relative;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:16px 18px 16px 58px;display:flex;flex-direction:column;gap:10px}
+.exstep.bad{border-left:4px solid var(--wrong)} .exstep.good{border-left:4px solid var(--good)}
+.exnum{position:absolute;left:16px;top:16px;width:28px;height:28px;border-radius:50%;background:var(--fg);color:var(--bg);font-family:var(--mono);font-weight:600;display:flex;align-items:center;justify-content:center}
+.exstep.bad .exnum{background:var(--wrong)} .exstep.good .exnum{background:var(--good)}
+.exhead{display:flex;flex-direction:column;gap:2px}
+.exlab{font-size:.72rem;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.exstep.bad .exlab{color:var(--wrong)} .exstep.good .exlab{color:var(--good)}
+.exhead h4{margin:0;font-family:var(--display);font-size:1.12rem}
+.exstep p{max-width:none;font-size:.93rem}
+.exstep pre.code{background:var(--code-bg);border:1px solid var(--line);border-radius:var(--radius);max-height:none}
+.extbl{font-size:.88rem}
+.extbl q{font-style:italic}
+.extbl code{font-family:var(--mono);font-size:.8rem;background:var(--bg);padding:1px 5px;border-radius:var(--radius);text-transform:none;letter-spacing:0}
+.exv{font-family:var(--mono);font-weight:600;white-space:nowrap}
+.exv.hi{color:var(--good)} .exv.mid{color:var(--warn)} .exv.lo{color:var(--lo-text)}
+.exwarn{border-left:3px solid var(--wrong);padding-left:12px;color:var(--fg)}
+.exwhy{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px;font-size:.92rem}
+@media (max-width:560px){.exstep{padding-left:18px;padding-top:54px}.exnum{top:16px}}
+.intro{display:flex;flex-direction:column;gap:22px}
+.ihero{display:flex;flex-direction:column;gap:12px}
+.ihero h1{font-size:clamp(2rem,5vw,2.9rem)}
+.iflow{display:flex;flex-wrap:nowrap;align-items:stretch;gap:6px}
+.ifn{flex:1 1 0;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:10px 12px;display:flex;flex-direction:column;gap:3px;min-width:0}
+.ifn b{font-family:var(--display);font-size:1.05rem}
+.ifn small{font-size:.76rem;color:var(--muted);line-height:1.35}
+.ifn code{font-family:var(--mono);font-size:.9em}
+.ifk{font-size:.66rem;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.ifn.jev{border:2px solid var(--accent);background:var(--accent-soft)} .ifn.jev b{color:var(--accent)}
+.ifa{align-self:center;font-family:var(--mono);font-size:1.1rem;color:var(--muted)}
+.itypes{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.itype{background:var(--surface);border:1px solid var(--line);border-top:4px solid currentColor;border-radius:var(--radius);padding:16px;display:flex;flex-direction:column;gap:12px;min-width:0;color:var(--fg)}
+.itype.n{border-top-color:var(--base)} .itype.c{border-top-color:var(--accent)} .itype.s{border-top-color:var(--fg)}
+.itop{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.istep{font-family:var(--mono);font-size:.75rem;font-weight:600;width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:var(--fg);color:var(--bg)}
+.iwhen{font-size:.8rem;color:var(--muted)}
+.itype .iq{font-family:var(--display);font-size:1.02rem;max-width:none}
+.itype .iq q{font-style:italic}
+.iout{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 8px;font-size:.92rem}
+.iout code{font-family:var(--mono);font-size:.85rem;background:var(--bg);padding:1px 6px;border-radius:var(--radius)}
+.iout b{font-family:var(--mono)}
+.iout span{flex-basis:100%;font-size:.78rem;color:var(--muted)}
+.iconf{font-size:.84rem;color:var(--muted);max-width:none}
+.iconf b{color:var(--fg)}
+.itype .golink{margin-top:auto}
+.golink.n{border-color:var(--base);color:var(--base)} .golink.n:hover{background:var(--base);color:var(--surface)}
+.golink.c{border-color:var(--accent);color:var(--accent)} .golink.c:hover{background:var(--accent);color:var(--surface)}
+.golink.s,.golink.w{border-color:var(--fg);color:var(--fg)} .golink.s:hover,.golink.w:hover{background:var(--fg);color:var(--bg)}
+.golink.ghost{border-style:dashed}
+.idial{display:flex;flex-direction:column;gap:3px}
+.idtrack{position:relative;height:14px;border-radius:var(--radius);background:var(--bg);border:1px solid var(--line)}
+.idmid{position:absolute;left:50%;top:-3px;bottom:-3px;border-left:2px dashed var(--base)}
+.idneedle{position:absolute;top:-5px;width:4px;height:24px;margin-left:-2px;border-radius:var(--radius);background:var(--fg)}
+.idlabs{display:flex;justify-content:space-between;font-family:var(--mono);font-size:.66rem;color:var(--muted)}
+.ibars{display:flex;gap:6px;align-items:flex-end}
+.ibc{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;min-width:0}
+.ibb{height:48px;width:100%;max-width:30px;display:flex;align-items:flex-end;background:var(--bg);border-radius:var(--radius)}
+.ibb i{display:block;width:100%;background:var(--muted);opacity:.5;border-radius:var(--radius) var(--radius) 0 0;min-height:1px}
+.ibc.on .ibb i{background:var(--accent);opacity:1}
+.ibc span{font-size:.62rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.ibars.ord{position:relative;padding-bottom:2px}
+.ibars.ord::after{content:"";position:absolute;left:0;right:0;bottom:15px;border-bottom:2px solid var(--fg);opacity:.25}
+.iign{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.iig{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:14px;display:flex;flex-direction:column;gap:6px;min-width:0;font-size:.86rem;color:var(--muted)}
+.iig b{color:var(--fg);font-family:var(--display);font-size:1rem}
+.iig .wtag{align-self:flex-start}
+.iigv{margin-top:6px}
+.iig .ibb i{background:var(--base);opacity:.7}
+.wtag.w{color:var(--fg)}
+.inext{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:12px}
+.inx{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:16px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.inx .wtag{align-self:flex-start}
+.inx h4{margin:0;font-family:var(--display);font-size:1.12rem}
+.inx p{max-width:none;font-size:.9rem;color:var(--muted)}
+.inxb{display:flex;flex-wrap:wrap;gap:8px}
+.inxb .golink{margin-top:4px}
+@media (max-width:760px){.itypes,.iign,.inext{grid-template-columns:minmax(0,1fr)}.iflow{flex-wrap:wrap}.ifa{display:none}.ifn{flex:1 1 45%}}
+.disc{font-size:.8rem;color:var(--muted);border:1px dashed var(--line);border-radius:var(--radius,3px);padding:6px 10px;max-width:none}
+.disc a,.sitefoot a{color:var(--accent)}
+.sitefoot{border-top:1px solid var(--line);margin-top:20px}
+.sfin{max-width:860px;margin:0 auto;padding:20px 20px 40px;display:flex;flex-direction:column;gap:6px;font-size:.8rem;color:var(--muted)}
+.sfin p{max-width:none}
+.note{border-left:3px solid var(--base);background:var(--base-soft);padding:12px 16px;border-radius:0 var(--radius) var(--radius) 0;font-size:.95rem}
+.note p+p{margin-top:8px}
+.refresher{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+.refresher div{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:14px;font-size:.92rem;min-width:0}
+.refresher b{display:block;font-family:var(--display);font-size:1rem;margin-bottom:4px}
+.ex{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
+.ex > div{border:1px solid var(--line);border-radius:var(--radius);padding:14px;font-size:.9rem;display:flex;flex-direction:column;gap:6px;min-width:0}
+.ex q{font-style:italic;color:var(--muted)}
+.ex code{font-family:var(--mono);font-size:.82rem}
+svg text{fill:var(--muted);font-family:var(--mono);font-size:11px}
+table{border-collapse:collapse;width:100%;font-size:.92rem}
+td,th{border-bottom:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top}
+th{font-weight:600;color:var(--muted);font-size:.8rem;text-transform:uppercase;letter-spacing:.05em}
+.tbl{overflow-x:auto}
+.mono{font-family:var(--mono)}
+@media (max-width:520px){.row{grid-template-columns:72px 1fr 48px}.big{font-size:1.8rem}}
+@media (prefers-reduced-motion:no-preference){.fill{transition:width .12s}}
+</style>
+</head>
+<body>
+
+
+<nav class="tabs" role="tablist" aria-label="Page sections">
+  <div class="tabsin">
+    <button role="tab" data-tab="explainer" aria-selected="true" aria-controls="tab-explainer">Start here</button>
+    <button role="tab" data-tab="noul" aria-selected="false" aria-controls="tab-noul" tabindex="-1">Noul</button>
+    <button role="tab" data-tab="testbed" aria-selected="false" aria-controls="tab-testbed" tabindex="-1">Choice</button>
+    <button role="tab" data-tab="score" aria-selected="false" aria-controls="tab-score" tabindex="-1">Score</button>
+    <button role="tab" data-tab="which" aria-selected="false" aria-controls="tab-which" tabindex="-1">How to use</button>
+  </div>
+</nav>
+<div class="wrap" id="tab-explainer" role="tabpanel">
+<section class="intro">
+  <div class="ihero">
+    <div class="eyebrow">TypeSafe · Jev · System One model</div>
+    <h1>How Jev answers, and how sure it is</h1>
+    <p class="disc">Independent, unofficial explainer. Not affiliated with or endorsed by TypeSafe AI. Content checked against <a href="https://docs.typesafe.ai/">docs.typesafe.ai</a> on 5 October 2026; interactive values are simulated unless marked as docs examples. Checked against real Jev (<code>typesafe/jev-1.13-20260917</code>) the same day: field names and confidence formulas match, values within 0.05 of the docs. Rerun it with <a href="https://github.com/bracoelho/jev-explainer/tree/main/tools">tools/validate_jev.py</a>.</p>
+    <p class="lede">Jev doesn't write text. Your code sends it a piece of text and a <b>typed question</b>; it returns a <b>typed answer with probabilities</b>. This page explains the three question types, how each one measures its confidence, and how to turn that into decisions.</p>
+  </div>
+
+  <div class="iflow" aria-label="How a request flows">
+    <div class="ifn"><span class="ifk">1 · you send</span><b>Text</b><small><code>state</code>: a ticket, a message, a document</small></div>
+    <div class="ifa" aria-hidden="true">+</div>
+    <div class="ifn"><span class="ifk">and</span><b>A typed question</b><small>Noul, Choice or Score, with <code>instructions</code></small></div>
+    <div class="ifa" aria-hidden="true">→</div>
+    <div class="ifn jev"><span class="ifk">2 · Jev</span><b>Jev</b><small>evaluates each question, in parallel</small></div>
+    <div class="ifa" aria-hidden="true">→</div>
+    <div class="ifn"><span class="ifk">3 · you get</span><b>A typed answer</b><small>a value plus probabilities, and usually a <code>confidence</code></small></div>
+    <div class="ifa" aria-hidden="true">→</div>
+    <div class="ifn"><span class="ifk">4 · your code</span><b>Decides</b><small>act, ask, or hand to a person</small></div>
+  </div>
+
+  <div class="subhead">
+    <div class="eyebrow">The three question types</div>
+    <h3>Pick the shape of the answer</h3>
+    <p class="subline">Each tab explains one type with fixed cases, an interactive tool and the real API call. A good reading order is left to right.</p>
+  </div>
+  <div class="itypes">
+    <div class="itype n">
+      <div class="itop"><span class="istep">1</span><span class="wtag n">Noul</span><span class="iwhen">yes or no</span></div>
+      <p class="iq"><q>Is the customer asking for a human agent?</q></p>
+      <div class="idial"><div class="idtrack"><span class="idmid"></span><span class="idneedle" style="left:84.0%"></span></div><div class="idlabs"><span>no</span><span>0.5</span><span>yes</span></div></div>
+      <div class="iout"><code>noul</code> = <b>0.84</b><span>the probability of yes</span></div>
+      <p class="iconf"><b>Confidence:</b> not returned. The distance from 0.5 is the certainty; your threshold makes the decision.</p>
+      <button type="button" class="golink n" data-goto="noul">Open Noul →</button>
+    </div>
+    <div class="itype c">
+      <div class="itop"><span class="istep">2</span><span class="wtag c">Choice</span><span class="iwhen">one of several, no order</span></div>
+      <p class="iq"><q>Which team should handle this?</q></p>
+      <div class="ibars "><div class="ibc"><div class="ibb"><i style="height:4%"></i></div><span>shipping</span></div><div class="ibc"><div class="ibb"><i style="height:35%"></i></div><span>billing</span></div><div class="ibc on"><div class="ibb"><i style="height:61%"></i></div><span>returns</span></div></div>
+      <div class="iout"><code>choice</code> = <b>"returns"</b><span>confidence 0.42</span></div>
+      <p class="iconf"><b>Confidence:</b> how far the top probability climbs from the even split 1/n towards certainty.</p>
+      <button type="button" class="golink c" data-goto="testbed">Open Choice →</button>
+    </div>
+    <div class="itype s">
+      <div class="itop"><span class="istep">3</span><span class="wtag s">Score</span><span class="iwhen">a level on an ordered scale</span></div>
+      <p class="iq"><q>How severe is the reported issue?</q></p>
+      <div class="ibars ord"><div class="ibc"><div class="ibb"><i style="height:0%"></i></div><span>cosmetic</span></div><div class="ibc on"><div class="ibb"><i style="height:89%"></i></div><span>workaround</span></div><div class="ibc"><div class="ibb"><i style="height:11%"></i></div><span>blocking</span></div></div>
+      <div class="iout"><code>score</code> = <b>1.11</b><span>confidence 0.84</span></div>
+      <p class="iconf"><b>Confidence:</b> how far the probability sits from the peak level, compared with total ignorance.</p>
+      <button type="button" class="golink s" data-goto="score">Open Score →</button>
+    </div>
+  </div>
+
+  <div class="subhead">
+    <div class="eyebrow">The idea behind every confidence number</div>
+    <h3>Distance from "no idea"</h3>
+    <p class="subline">Each type has its own picture of total ignorance. Confidence measures how far the answer is from it, rescaled so ignorance is 0 and certainty is 1.</p>
+  </div>
+  <div class="iign">
+    <div class="iig n"><span class="wtag n">Noul</span><b>Ignorance = 0.5</b><span>a coin flip, in the middle of the dial</span><div class="iigv"><div class="idial"><div class="idtrack"><span class="idmid"></span><span class="idneedle" style="left:50.0%"></span></div><div class="idlabs"><span>no</span><span>0.5</span><span>yes</span></div></div></div></div>
+    <div class="iig c"><span class="wtag c">Choice</span><b>Ignorance = 1/n</b><span>every option equally likely: a floor</span><div class="iigv"><div class="ibars "><div class="ibc"><div class="ibb"><i style="height:33%"></i></div><span>A</span></div><div class="ibc"><div class="ibb"><i style="height:33%"></i></div><span>B</span></div><div class="ibc"><div class="ibb"><i style="height:33%"></i></div><span>C</span></div></div></div></div>
+    <div class="iig s"><span class="wtag s">Score</span><b>Ignorance = flat spread</b><span>its average distance, MAD<sub>unif</sub>, is the yardstick</span><div class="iigv"><div class="ibars ord"><div class="ibc"><div class="ibb"><i style="height:20%"></i></div><span>0</span></div><div class="ibc"><div class="ibb"><i style="height:20%"></i></div><span>1</span></div><div class="ibc"><div class="ibb"><i style="height:20%"></i></div><span>2</span></div><div class="ibc"><div class="ibb"><i style="height:20%"></i></div><span>3</span></div><div class="ibc"><div class="ibb"><i style="height:20%"></i></div><span>4</span></div></div></div></div>
+  </div>
+  <div class="note"><p><strong>Probability and confidence answer different questions.</strong> The probability says <em>which</em> answer; confidence says <em>how sure</em>. A top probability of 0.61 sounds like "61% sure", but with 3 options the floor is already 0.33, so confidence is only 0.42. Whether a 0.8 really comes true 80% of the time is a third question, <em>calibration</em>, which only your own labelled data can answer.</p></div>
+
+  <div class="subhead">
+    <div class="eyebrow">Putting it to work</div>
+    <h3>From number to decision</h3>
+  </div>
+  <div class="inext">
+    <div class="inx"><span class="wtag w">How to use</span><h4>Choice, Score or Noul?</h4><p>A side-by-side table, three quick tests, what goes wrong with the wrong type, and a worked example: "Is the customer angry <i>and</i> asking for a refund?"</p>
+      <div class="inxb"><button type="button" class="golink w" data-goto="which">Open How to use →</button><button type="button" class="golink w ghost" data-goto="which" data-anchor="w-ex1">Jump to the worked example →</button></div></div>
+    <div class="inx"><span class="wtag w">Thresholds</span><h4>The cut-offs are yours</h4><p>The Low / Medium / High bands on every tab use illustrative cut-offs of 0.5 and 0.7. TypeSafe's docs set thresholds per action, by the cost of being wrong: a balance check can act on less certainty than a money transfer.</p></div>
+  </div>
+  <p class="cite">Sources: <a href="https://docs.typesafe.ai/confidence">Confidence</a> · <a href="https://docs.typesafe.ai/primitives/noul">Noul</a> · <a href="https://docs.typesafe.ai/primitives/choice">Choice</a> · <a href="https://docs.typesafe.ai/primitives/score">Score</a> · <a href="https://docs.typesafe.ai/patterns/confidence-routing">Confidence-gated routing</a></p>
+</section>
+</div>
+
+<div class="wrap" id="tab-noul" role="tabpanel" hidden>
+<section id="u-noul">
+  <div class="eyebrow">Primitive 3 · yes / no</div>
+  <h2>Noul</h2>
+  <p>Ask a yes/no question, or give a statement to judge: does this message ask for a refund, does this resume mention distributed systems, does this comment contain personal data. Jev returns one number, the probability that the answer is yes. That single number carries both the answer and the certainty, so there is no separate confidence field.</p>
+
+  <div class="fields">
+    <div class="fieldshead">
+      <div class="eyebrow">What a Noul answer contains</div>
+      <p>One answer, one field. Everything else is computed by your code. Value from the docs' human-escalation example.</p>
+    </div>
+    <div class="fgrid">
+      <div class="ftile on"><code>noul</code><div class="fval">0.99</div><b>Yes, and how sure</b><span>The probability that the answer is yes. Near 1 is a strong yes, near 0 a strong no, near 0.5 undecided.</span></div>
+      <div class="ftile mine"><code>confidence</code><div class="fval">0.98</div><b>Not in the answer</b><span>Optional, if you want one scale for all primitives: <code>|2p − 1|</code>. Your code works it out.</span></div>
+      <div class="ftile mine"><code>decision</code><div class="fval">yes</div><b>Not in the answer</b><span>Yes or no comes from comparing <code>noul</code> with a threshold you choose, based on the cost of being wrong.</span></div>
+    </div>
+  </div>
+
+  <div class="defcard wide">
+    <div class="def">
+      <div class="eyebrow">Definitions · TypeSafe docs</div>
+      <div class="dfield"><code class="ks">noul</code><blockquote class="qs">A Noul question asks the TypeSafe model to evaluate a yes/no question and return the probability that the answer is yes.</blockquote>
+      <blockquote class="q3">A value near 1 is a strong yes. A value near 0 is a strong no. A value near 0.5 means the model gives yes and no similar probability.</blockquote></div>
+      <div class="dfield"><code class="kc">confidence</code><blockquote>A Noul answer is a single probability <i>p</i> that the answer is yes, and TypeSafe returns no separate <code>confidence</code> for it.</blockquote></div>
+      <div class="shapes"><span><span class="mini" aria-hidden="true"><i style="height:94%"></i><i style="height:6%"></i></span>strong no</span><span><span class="mini" aria-hidden="true"><i style="height:50%"></i><i style="height:50%"></i></span>undecided</span><span><span class="mini" aria-hidden="true"><i style="height:6%"></i><i style="height:94%"></i></span>strong yes</span></div>
+      <div class="srcs"><a class="src" href="https://docs.typesafe.ai/primitives/noul">docs.typesafe.ai/primitives/noul</a><a class="src" href="https://docs.typesafe.ai/confidence">docs.typesafe.ai/confidence</a></div>
+    </div>
+    <div class="defmath">
+      <div class="eyebrow">Formulas</div>
+      <div class="formula ftop"><div class="flab ks">noul</div><math display="block"><mrow><mtext class="ks">noul</mtext><mo>=</mo><mi class="ka">p</mi><mo>=</mo><mi>P</mi><mrow><mo>(</mo><mtext>yes</mtext><mo>)</mo></mrow></mrow></math><div class="flab kc">confidence · optional</div><math display="block"><mrow><mtext>confidence</mtext><mo>=</mo><mrow><mo>|</mo><mrow><mn>2</mn><mi class="ka">p</mi><mo>−</mo><mn>1</mn></mrow><mo>|</mo></mrow></mrow></math><p class="fnote">the docs' optional formula. It is the Choice formula with two options:</p><math display="block"><mrow><mrow><mo>|</mo><mrow><mn>2</mn><mi class="ka">p</mi><mo>−</mo><mn>1</mn></mrow><mo>|</mo></mrow><mo>=</mo><mfrac><mrow><mrow><mi>max</mi><mrow><mo>(</mo><mrow><mi class="ka">p</mi><mo>,</mo><mn>1</mn><mo>−</mo><mi class="ka">p</mi></mrow><mo>)</mo></mrow><mo>−</mo><mfrac><mrow><mn class="kb">1</mn></mrow><mrow><mn class="kb">2</mn></mrow></mfrac></mrow></mrow><mrow><mrow><mn>1</mn><mo>−</mo><mfrac><mrow><mn class="kb">1</mn></mrow><mrow><mn class="kb">2</mn></mrow></mfrac></mrow></mrow></mfrac></mrow></math></div>
+    </div>
+    <div class="symrow four three">
+      <div class="sym ka"><math><mi class="ka">p</mi></math><span><b>Yes probability</b><span class="sd">the <code>noul</code> value Jev returns, from 0 to 1</span></span></div>
+      <div class="sym kb"><math><mfrac><mrow><mn class="kb">1</mn></mrow><mrow><mn class="kb">2</mn></mrow></mfrac></math><span><b>Ignorance point</b><span class="sd">a coin flip: yes and no equally likely</span></span></div>
+      <div class="sym"><math><mi>t</mi></math><span><b>Threshold</b><span class="sd">your cut-off: at or above it, act as if the answer is yes</span></span></div>
+    </div>
+  </div>
+
+  <details class="intuit">
+    <summary><span class="eyebrow">Intuition builder</span><span class="ititle">Read it as a dial from no to yes</span></summary>
+    <div class="ibody">
+    <p class="iq">Which side of the middle is the needle on, and how far from the middle?</p>
+    <div class="ianchors">
+      <div class="ia hi"><span class="iak"><math><mrow><mi class="ka">p</mi><mo>≈</mo><mn>0</mn></mrow></math></span><span>A strong no. The side tells you the answer, the distance tells you how sure.</span><b>confidence near 1</b></div>
+      <div class="ia lo"><span class="iak"><math><mrow><mi class="ka">p</mi><mo>≈</mo><mfrac><mrow><mn class="kb">1</mn></mrow><mrow><mn class="kb">2</mn></mrow></mfrac></mrow></math></span><span>Yes and no equally likely. The model does not know.</span><b>confidence near 0</b></div>
+      <div class="ia hi"><span class="iak"><math><mrow><mi class="ka">p</mi><mo>≈</mo><mn>1</mn></mrow></math></span><span>A strong yes.</span><b>confidence near 1</b></div>
+    </div>
+    <div class="idef">
+      <div class="idtext">
+        <h4>What "total ignorance" means here</h4>
+        <p>With two possible answers, a model with no idea gives each the same probability, <math><mfrac><mrow><mn class="kb">1</mn></mrow><mrow><mn class="kb">2</mn></mrow></mfrac></math>. That is the <b class="kbt">ignorance point</b>. Unlike Choice and Score, it sits in the middle of the scale, not at an end: moving away from it in <i>either</i> direction adds certainty.</p>
+        <p>So 0.10 and 0.90 are equally certain, just in opposite directions. Both have confidence 0.80.</p>
+      </div>
+      <div class="ucards"><div class="ucard"><div class="uhead">2 answers, equally likely</div><div class="ucols"><div class="ucol"><div class="ubar"><i style="height:50%"></i></div><em>0.50</em><span>no</span></div><div class="ucol"><div class="ubar"><i style="height:50%"></i></div><em>0.50</em><span>yes</span></div></div><div class="umath"><math><mrow><mi class="ka">p</mi><mo>=</mo><mfrac><mrow><mn class="kb">1</mn></mrow><mrow><mn class="kb">2</mn></mrow></mfrac><mo>=</mo><mn class="kb">0.5</mn></mrow></math></div></div><div class="ucard"><div class="uhead">Same certainty, opposite answers</div><div class="vmini"><math><mrow><mrow><mo>|</mo><mrow><mn>2</mn><mo>·</mo><mn>0.10</mn><mo>−</mo><mn>1</mn></mrow><mo>|</mo></mrow><mo>=</mo><mrow><mo>|</mo><mrow><mn>2</mn><mo>·</mo><mn>0.90</mn><mo>−</mo><mn>1</mn></mrow><mo>|</mo></mrow><mo>=</mo><mn>0.80</mn></mrow></math></div><p class="vnote">The needle's side gives the answer. Its distance from 0.5 gives the certainty.</p></div></div>
+    </div>
+    </div>
+  </details>
+
+  <div class="cases">
+    <div class="subhead">
+      <div class="eyebrow">Human escalation · the docs' recorded answers</div>
+      <h3>Six real answers</h3>
+      <p class="subline">"Is the customer asking for a human agent?"</p>
+    </div>
+    <div class="caselead"><p>TypeSafe's docs show what Jev returned for six different messages. Read them as a dial: the dashed line is the coin-flip point, 0.5.</p></div>
+    <div class="rplot"><div class="rrow"><q>Thanks, that fixed it!</q><div class="rtrack"><div class="rhalf"></div><div class="rdot" style="left:2.0%"></div></div><b class="rval">0.02</b></div><div class="rrow"><q>How do I reset my password?</q><div class="rtrack"><div class="rhalf"></div><div class="rdot" style="left:7.000000000000001%"></div></div><b class="rval">0.07</b></div><div class="rrow"><q>I need this sorted today, whatever it takes.</q><div class="rtrack"><div class="rhalf"></div><div class="rdot" style="left:26.0%"></div></div><b class="rval">0.26</b></div><div class="rrow"><q>Are you a bot?</q><div class="rtrack"><div class="rhalf"></div><div class="rdot" style="left:40.0%"></div></div><b class="rval">0.40</b></div><div class="rrow"><q>Is there any way to speak to someone about my invoice?</q><div class="rtrack"><div class="rhalf"></div><div class="rdot y" style="left:84.0%"></div></div><b class="rval">0.84</b></div><div class="rrow"><q>I have asked three times now. Can I please just talk to a real person?</q><div class="rtrack"><div class="rhalf"></div><div class="rdot y" style="left:99.0%"></div></div><b class="rval">0.99</b></div></div>
+
+    <div class="subhead">
+      <div class="eyebrow">Same answers · three thresholds</div>
+      <h3>Three fixed cases</h3>
+      <p class="subline">The threshold is a business decision, not a model setting</p>
+    </div>
+    <div class="caselead">
+      <p>Jev's answers stay the same. Only the threshold changes, and with it which conversations go to a person.</p>
+      <p>The docs' rule: <i>"Where to set the threshold depends on the cost of being wrong."</i></p>
+    </div>
+    <div class="cgrid">
+      <div class="ccard tcard ">
+      <div class="chead"><b>Balanced</b><span class="tchip">t = 0.5</span></div>
+      <p class="cgloss">"Use 0.5 when yes and no are equally easy to act on."</p>
+      <div class="ttrack"><div class="tline" style="left:50.0%"><span>0.5</span></div><div class="tdot" style="left:2.0%"></div><div class="tdot" style="left:7.000000000000001%"></div><div class="tdot" style="left:26.0%"></div><div class="tdot" style="left:40.0%"></div><div class="tdot y" style="left:84.0%"></div><div class="tdot y" style="left:99.0%"></div><div class="tlab0">0</div><div class="tlab1">1</div></div>
+      <ul class="tlist"><li class=""><span>0.02</span>Thanks, that fixed it!</li><li class=""><span>0.07</span>How do I reset my password?</li><li class=""><span>0.26</span>I need this sorted today, whatever it takes.</li><li class=""><span>0.40</span>Are you a bot?</li><li class="y"><span>0.84</span>Is there any way to speak to someone about my invoice?</li><li class="y"><span>0.99</span>I have asked three times now. Can I please just talk to a real person?</li></ul>
+      <div class="cfoot"><span>Escalated to a human <b>2 of 6</b></span></div>
+    </div>
+      <div class="ccard tcard ">
+      <div class="chead"><b>False yes is expensive</b><span class="tchip">t = 0.9</span></div>
+      <p class="cgloss">"Raise it when acting on a false yes is expensive, such as paging someone or issuing a refund."</p>
+      <div class="ttrack"><div class="tline" style="left:90.0%"><span>0.9</span></div><div class="tdot" style="left:2.0%"></div><div class="tdot" style="left:7.000000000000001%"></div><div class="tdot" style="left:26.0%"></div><div class="tdot" style="left:40.0%"></div><div class="tdot" style="left:84.0%"></div><div class="tdot y" style="left:99.0%"></div><div class="tlab0">0</div><div class="tlab1">1</div></div>
+      <ul class="tlist"><li class=""><span>0.02</span>Thanks, that fixed it!</li><li class=""><span>0.07</span>How do I reset my password?</li><li class=""><span>0.26</span>I need this sorted today, whatever it takes.</li><li class=""><span>0.40</span>Are you a bot?</li><li class=""><span>0.84</span>Is there any way to speak to someone about my invoice?</li><li class="y"><span>0.99</span>I have asked three times now. Can I please just talk to a real person?</li></ul>
+      <div class="cfoot"><span>Escalated to a human <b>1 of 6</b></span></div>
+    </div>
+      <div class="ccard tcard ">
+      <div class="chead"><b>Missing a yes is expensive</b><span class="tchip">t = 0.2</span></div>
+      <p class="cgloss">"Lower it when missing a true yes is expensive, such as failing to flag a safety issue."</p>
+      <div class="ttrack"><div class="tline" style="left:20.0%"><span>0.2</span></div><div class="tdot" style="left:2.0%"></div><div class="tdot" style="left:7.000000000000001%"></div><div class="tdot y" style="left:26.0%"></div><div class="tdot y" style="left:40.0%"></div><div class="tdot y" style="left:84.0%"></div><div class="tdot y" style="left:99.0%"></div><div class="tlab0">0</div><div class="tlab1">1</div></div>
+      <ul class="tlist"><li class=""><span>0.02</span>Thanks, that fixed it!</li><li class=""><span>0.07</span>How do I reset my password?</li><li class="y"><span>0.26</span>I need this sorted today, whatever it takes.</li><li class="y"><span>0.40</span>Are you a bot?</li><li class="y"><span>0.84</span>Is there any way to speak to someone about my invoice?</li><li class="y"><span>0.99</span>I have asked three times now. Can I please just talk to a real person?</li></ul>
+      <div class="cfoot"><span>Escalated to a human <b>4 of 6</b></span></div>
+    </div>
+    </div>
+    <p class="cnote">The invoice message (<b>0.84</b>) is escalated at 0.5 and 0.2 but not at 0.9. Nothing about the model changed: you decided a false escalation costs more there. "Are you a bot?" (<b>0.40</b>) only reaches a person when missing a real request is the bigger risk.</p>
+  </div>
+
+  <div class="subhead">
+    <div class="eyebrow">Try it yourself</div>
+    <h3>Interactive examples</h3>
+    <p class="subline">Pick a message or drag the dial. Move the threshold to see the decision change.</p>
+  </div>
+
+  <div class="bench">
+    <div class="toolbar"><span class="tlab2">Docs · messages</span>
+      <button data-up="0">Thanks, that fixed it!</button>
+      <button data-up="1">Reset password</button>
+      <button data-up="2">Sorted today</button>
+      <button data-up="3">Are you a bot?</button>
+      <button data-up="4" class="on">Speak to someone</button>
+      <button data-up="5">Asked three times</button>
+    </div>
+    <div class="toolbar"><span class="tlab2">Threshold</span>
+      <button data-ut="0.5" class="on">0.5 · balanced</button>
+      <button data-ut="0.9">0.9 · false yes costly</button>
+      <button data-ut="0.2">0.2 · missed yes costly</button>
+    </div>
+    <div class="qcard" id="u-cap">
+      <div class="caphead"><div class="eyebrow">What we ask Jev, and what it answers</div><span class="capstat"><span class="on">✓ Jev's recorded answer for this message</span><span class="offt">The dial has moved away from Jev's recorded answer. Pick a message to restore it.</span></span></div>
+      <div class="qsep">Request</div><div class="qrow"><code>instructions</code><div class="qq">Is the customer asking for a human agent?</div><span class="qtag req">required</span></div>
+      <div class="qrow"><code>state</code><div><q id="u-capq"></q></div><span class="qtag req">required</span></div>
+      <div class="qrow qopt"><code>criteria</code><div>Not used in this docs example. When the question leaves room for interpretation, add <code>true</code> and <code>false</code> descriptions of what a yes and a no mean (see the API card, view 1b).</div><span class="qtag">optional</span></div>
+      <div class="qsep">Response</div><div class="qrow qans"><code>noul</code><div>Jev's answer: the probability that the answer to the question is <b>yes</b>, for this message.</div><b class="qval" id="u-qval"></b></div>
+    </div>
+    <div class="row" style="grid-template-columns:140px 1fr 56px"><label for="u-p">Yes probability <small>noul · p</small></label><div class="track"><div class="fill" id="u-pF"></div><div class="unif" style="left:50%"></div><input id="u-p" type="range" min="0" max="1" step="0.01" value="0.84"></div><div class="val" id="u-pV"></div></div>
+    <div class="row" style="grid-template-columns:140px 1fr 56px"><label for="u-t">Threshold <small>your choice · t</small></label><div class="track"><div class="fill tfill" id="u-tF"></div><input id="u-t" type="range" min="0.05" max="0.95" step="0.01" value="0.5"></div><div class="val" id="u-tV"></div></div>
+    <div class="mapper">
+      <div class="mtag">probability scale · <span>where the needle sits between no (0) and yes (1)</span></div>
+      <div class="ruler" id="u-ruler"></div>
+      <svg id="u-map" class="map" viewBox="0 0 100 60" preserveAspectRatio="none" aria-hidden="true"></svg>
+      <div class="ruler conf" id="u-conf"></div>
+      <div class="mtag">confidence scale · <span>the same point, folded in half: 0.5 becomes 0, and both 0 and 1 become 1. Confidence ignores the direction; the threshold decides it. The Low / Medium / High bands are illustrative.</span></div>
+    </div>
+    <div class="mcalc" id="u-facts" aria-live="polite"></div>
+    <details class="fold"><summary>Calculation <span>confidence, the decision and its margin</span></summary><div class="mcalc" id="u-calc" aria-live="polite"></div></details>
+    <div class="result"><div class="big" id="u-out"></div><span class="pill" id="u-pill"></span><span id="u-msg" style="color:var(--muted);font-size:.9rem"></span></div>
+  </div>
+
+  <details class="fold apifold" id="u-api">
+    <summary>API request and response <span>what your code sends to Jev and what comes back, for the dial above</span></summary>
+    <div class="apibody">
+      <div class="apiflow" aria-hidden="true">
+        <span class="node">Your code</span><span class="arr">POST /v1/systemone →</span><span class="node jev">Jev</span><span class="arr">← JSON answer</span><span class="node">Your code applies the threshold</span>
+      </div>
+      <div class="ctabs" role="tablist" aria-label="Code view">
+        <button role="tab" data-v="req" aria-selected="true">1 · Request (JSON)</button>
+        <button role="tab" data-v="crit" aria-selected="false">1b · With criteria</button>
+        <button role="tab" data-v="sdk" aria-selected="false">1 · Request (Python SDK)</button>
+        <button role="tab" data-v="res" aria-selected="false">2 · Response (JSON)</button>
+        <button role="tab" data-v="use" aria-selected="false">3 · Your code: threshold</button>
+      </div>
+      <div class="codewrap">
+        <div class="codehead"><span class="cmeta"></span><button class="copy" type="button">Copy</button></div>
+        <pre class="code"><code></code></pre>
+      </div>
+      <p class="apinote"></p>
+    </div>
+  </details>
+
+  <div class="insight">
+    <div class="insl">
+      <div class="eyebrow">Key insight</div>
+      <h3>One question, one condition</h3>
+      <p>A Noul gives back one number. Put two conditions in one question, such as "Is the customer angry <i>and</i> asking for a refund?", and that number has to summarise both: you can no longer tell which part is true. Ask one Noul per condition and combine them in code. And phrase every question so that a high value means <b>yes</b>.</p>
+      <button type="button" class="golink" data-goto="which" data-anchor="w-ex1">See the full worked example in How to use →</button>
+    </div>
+    <div class="insr">
+      <div class="dcard"><div class="dhead">One compound Noul</div><div class="kq"><code>angry_and_refund</code><b class="kv mid">0.45</b></div><p class="kread">Which part is uncertain? Angry without asking for a refund, a calm refund request, or both half-true? <b>You can't tell.</b></p></div>
+      <div class="dcard"><div class="dhead">Two Nouls, combined in code</div><div class="kq"><code>is_angry</code><b class="kv hi">0.92</b></div><div class="kq"><code>wants_refund</code><b class="kv lo">0.08</b></div><p class="kread"><b>Angry, but not asking for a refund.</b> A clear answer per condition; your code decides what the pair means.</p></div>
+    </div>
+  </div>
+</section>
+</div>
+<div class="wrap" id="tab-testbed" role="tabpanel" hidden>
+<!-- CHOICE (test bed copy) -->
+<section id="t-choice">
+  <div class="eyebrow">Primitive 1 · unordered options</div>
+  <h2>Choice</h2>
+  <p>Pick one option from a set (support department, product category, language). Options have no order, so the only thing that matters is how much the top option beats a fair share.</p>
+  <div class="fields">
+    <div class="fieldshead">
+      <div class="eyebrow">What a Choice answer contains</div>
+      <p>One answer, three fields. This tab is about <code>confidence</code>, but you read it together with the other two. Values from the docs' ticket-routing example.</p>
+    </div>
+    <div class="fgrid">
+      <div class="ftile"><code>choice</code><div class="fval">"returns"</div><b>What</b><span>The option with the highest probability. The answer your code acts on.</span></div>
+      <div class="ftile on"><code>confidence</code><div class="fval">0.42</div><b>How much to trust it</b><span>0 to 1, from how far the top probability rises above an even split. Explained on this tab.</span></div>
+      <div class="ftile"><code>probabilities</code><div class="fval"><span class="fmini" aria-hidden="true"><i style="height:4%"></i><i style="height:35%"></i><i style="height:61%"></i></span><small>0.04 · 0.35 · 0.61</small></div><b>The shape</b><span>The full split across options. Shows the runner-up and how close the race is.</span></div>
+      <div class="ftile mine"><code>ratio</code><div class="fval">1.74</div><b>Not in the answer</b><span>The top-to-second ratio, 0.61 / 0.35. Your code works it out from <code>probabilities</code>.</span></div>
+    </div>
+  </div>
+
+  <div class="defcard">
+    <div class="def">
+      <div class="eyebrow">Definitions · TypeSafe docs</div>
+      <div class="dfield"><code class="ks">choice</code><blockquote class="qs">The option with the highest probability.</blockquote></div>
+      <div class="dfield"><code class="kc">confidence</code><blockquote>A number from 0 to 1 computed from how <code>probabilities</code> is spread. A flat shape, with probability spread across several options, means low confidence. A single peak on one option means high confidence.</blockquote></div>
+      <div class="shapes"><span><span class="mini" aria-hidden="true"><i style="height:34%"></i><i style="height:33%"></i><i style="height:33%"></i></span>flat → low</span><span><span class="mini" aria-hidden="true"><i style="height:8%"></i><i style="height:84%"></i><i style="height:8%"></i></span>single peak → high</span></div>
+      <a class="src" href="https://docs.typesafe.ai/primitives/choice">docs.typesafe.ai/primitives/choice</a>
+    </div>
+    <div class="defmath">
+      <div class="eyebrow">Formulas</div>
+      <div class="formula ftop"><div class="flab ks">choice</div><math display="block"><mrow><mtext class="ks">choice</mtext><mo>=</mo><munder><mi>argmax</mi><mi>i</mi></munder><mspace width="0.2em"></mspace><msub><mi>p</mi><mi>i</mi></msub></mrow></math><p class="fnote">the option whose probability is largest; that probability is <math><msub><mi>p</mi><mtext>max</mtext></msub></math></p><div class="flab kc">confidence</div><div id="t-fChoice"></div></div>
+    </div>
+    <div class="symrow four three">
+      <div class="sym"><math><mi>n</mi></math><span><b>Options</b><span class="sd">how many options the question has</span></span></div>
+      <div class="sym kb"><math><mfrac><mrow><mn class="kb">1</mn></mrow><mrow><mi class="kb">n</mi></mrow></mfrac></math><span><b>Ignorance floor</b><span class="sd">what p<sub>max</sub> would be if every option were equally likely</span></span></div>
+      <div class="sym ka"><math><msub><mi class="ka">p</mi><mrow><mtext>max</mtext></mrow></msub></math><span><b>Top probability</b><span class="sd">the probability of the selected (highest) option</span></span></div>
+    </div>
+  </div>
+  
+
+  <details class="intuit">
+    <summary><span class="eyebrow">Intuition builder</span><span class="ititle">Read it as a position on a ruler</span></summary>
+    <div class="ibody">
+    <p class="iq">Where does the top probability sit between <b>total ignorance</b> and certainty?</p>
+    <div class="ianchors">
+      <div class="ia lo"><span class="iak"><math><mrow><msub><mi>p</mi><mrow><mtext>max</mtext></mrow></msub><mo>=</mo><mfrac><mrow><mn class="kb">1</mn></mrow><mrow><mi class="kb">n</mi></mrow></mfrac></mrow></math></span><span>Every option equally likely. No better than a guess.</span><b>confidence 0</b></div>
+      <div class="ia mid"><span class="iak"><math><mrow><mfrac><mrow><mn class="kb">1</mn></mrow><mrow><mi class="kb">n</mi></mrow></mfrac><mo>&lt;</mo><msub><mi>p</mi><mrow><mtext>max</mtext></mrow></msub><mo>&lt;</mo><mn>1</mn></mrow></math></span><span>One option leads, others still in the race.</span><b>between 0 and 1</b></div>
+      <div class="ia hi"><span class="iak"><math><mrow><msub><mi>p</mi><mrow><mtext>max</mtext></mrow></msub><mo>=</mo><mn>1</mn></mrow></math></span><span>All the probability on one option.</span><b>confidence 1</b></div>
+    </div>
+    <div class="idef">
+      <div class="idtext">
+        <h4>What "total ignorance" means here</h4>
+        <p>A model with no idea which option is right gives every option the same probability, <math><mfrac><mrow><mn>1</mn></mrow><mrow><mi>n</mi></mrow></mfrac></math>. That is the <b class="kbt">ignorance floor</b>: the lowest the top probability can ever be, because n probabilities below <math><mfrac><mrow><mn>1</mn></mrow><mrow><mi>n</mi></mrow></mfrac></math> could not add up to 1.</p>
+        <p>More options means a lower floor. A top probability of 0.6 is a weak lead between 2 options and a strong one among 5.</p>
+      </div>
+      <div class="ucards"><div class="ucard"><div class="uhead">3 options, all equally likely</div><div class="ucols"><div class="ucol"><div class="ubar"><i style="height:33%"></i></div><em>0.33</em><span>A</span></div><div class="ucol"><div class="ubar"><i style="height:33%"></i></div><em>0.33</em><span>B</span></div><div class="ucol"><div class="ubar"><i style="height:33%"></i></div><em>0.33</em><span>C</span></div></div><div class="umath"><math><mrow><msub><mi>p</mi><mrow><mtext>max</mtext></mrow></msub><mo>=</mo><mfrac><mrow><mn>1</mn></mrow><mrow><mn>3</mn></mrow></mfrac><mo>=</mo><mn class="kb">0.333</mn></mrow></math></div></div><div class="ucard"><div class="uhead">5 options, all equally likely</div><div class="ucols"><div class="ucol"><div class="ubar"><i style="height:20%"></i></div><em>0.20</em><span>A</span></div><div class="ucol"><div class="ubar"><i style="height:20%"></i></div><em>0.20</em><span>B</span></div><div class="ucol"><div class="ubar"><i style="height:20%"></i></div><em>0.20</em><span>C</span></div><div class="ucol"><div class="ubar"><i style="height:20%"></i></div><em>0.20</em><span>D</span></div><div class="ucol"><div class="ubar"><i style="height:20%"></i></div><em>0.20</em><span>E</span></div></div><div class="umath"><math><mrow><msub><mi>p</mi><mrow><mtext>max</mtext></mrow></msub><mo>=</mo><mfrac><mrow><mn>1</mn></mrow><mrow><mn>5</mn></mrow></mfrac><mo>=</mo><mn class="kb">0.2</mn></mrow></math></div></div></div>
+    </div>
+    </div>
+  </details>
+
+  <div class="cases">
+    <div class="subhead">
+      <div class="eyebrow">Support routing · 2, 3 and 5 options</div>
+      <h3>Three fixed cases</h3>
+      <p class="subline">Same top probability, different number of options</p>
+    </div>
+    <div class="caselead">
+      <p>In all 3 examples the top option, Returns, gets <b>0.6</b>. Only the number of options changes, and with it the ignorance floor <math><mfrac><mrow><mn>1</mn></mrow><mrow><mi>n</mi></mrow></mfrac></math>.</p>
+      <p>The higher the floor, the less a 0.6 lead is worth. Confidence measures the climb from the floor to certainty, not the raw 0.6.</p>
+    </div>
+    <div class="cgrid"><div class="ccard">
+      <div class="chead"><b>2 options</b><span class="pill lo">0.20</span></div>
+      <p class="cgloss">"Returns, or maybe Billing." A coin-flip with a slight lean.</p>
+      <div class="cchart cfl"><div class="ccols" style="grid-template-columns:repeat(2,minmax(0,1fr))"><div class="ccol pk"><div class="cbar"><i style="height:60%"></i></div><em>0.6</em><small>Returns</small></div><div class="ccol "><div class="cbar"><i style="height:40%"></i></div><em>0.4</em><small>Billing</small></div></div><div class="cfloor" style="--fl:0.5"><span>floor <math><mrow><mfrac><mrow><mn>1</mn></mrow><mrow><mn>2</mn></mrow></mfrac><mo>=</mo><mn>0.5</mn></mrow></math></span></div></div>
+      <div class="cmath"><math><mrow><mtext>confidence</mtext><mo>=</mo><mfrac><mrow><mrow><mn>0.6</mn><mo>−</mo><mn class="kb">0.5</mn></mrow></mrow><mrow><mrow><mn>1</mn><mo>−</mo><mn class="kb">0.5</mn></mrow></mrow></mfrac><mo>=</mo><mn>0.20</mn></mrow></math></div>
+      <div class="cfoot"><span>Top probability <b>0.60</b></span><span>Choice confidence <b class="lo">0.20</b></span><span class="cmp">Your code can also compute</span><span>Top-to-second ratio <b>1.5</b></span></div>
+    </div><div class="ccard">
+      <div class="chead"><b>3 options</b><span class="pill lo">0.40</span></div>
+      <p class="cgloss">"Returns, others far behind." A clear lead.</p>
+      <div class="cchart cfl"><div class="ccols" style="grid-template-columns:repeat(3,minmax(0,1fr))"><div class="ccol pk"><div class="cbar"><i style="height:60%"></i></div><em>0.6</em><small>Returns</small></div><div class="ccol "><div class="cbar"><i style="height:20%"></i></div><em>0.2</em><small>Billing</small></div><div class="ccol "><div class="cbar"><i style="height:20%"></i></div><em>0.2</em><small>Shipping</small></div></div><div class="cfloor" style="--fl:0.3333333333333333"><span>floor <math><mrow><mfrac><mrow><mn>1</mn></mrow><mrow><mn>3</mn></mrow></mfrac><mo>=</mo><mn>0.33</mn></mrow></math></span></div></div>
+      <div class="cmath"><math><mrow><mtext>confidence</mtext><mo>=</mo><mfrac><mrow><mrow><mn>0.6</mn><mo>−</mo><mn class="kb">0.33</mn></mrow></mrow><mrow><mrow><mn>1</mn><mo>−</mo><mn class="kb">0.33</mn></mrow></mrow></mfrac><mo>=</mo><mn>0.40</mn></mrow></math></div>
+      <div class="cfoot"><span>Top probability <b>0.60</b></span><span>Choice confidence <b class="lo">0.40</b></span><span class="cmp">Your code can also compute</span><span>Top-to-second ratio <b>3.0</b></span></div>
+    </div><div class="ccard">
+      <div class="chead"><b>5 options</b><span class="pill lo">0.50</span></div>
+      <p class="cgloss">"Returns, the rest scattered." A strong lead.</p>
+      <div class="cchart cfl"><div class="ccols" style="grid-template-columns:repeat(5,minmax(0,1fr))"><div class="ccol pk"><div class="cbar"><i style="height:60%"></i></div><em>0.6</em><small>Returns</small></div><div class="ccol "><div class="cbar"><i style="height:10%"></i></div><em>0.1</em><small>Billing</small></div><div class="ccol "><div class="cbar"><i style="height:10%"></i></div><em>0.1</em><small>Shipping</small></div><div class="ccol "><div class="cbar"><i style="height:10%"></i></div><em>0.1</em><small>Tech</small></div><div class="ccol "><div class="cbar"><i style="height:10%"></i></div><em>0.1</em><small>Account</small></div></div><div class="cfloor" style="--fl:0.2"><span>floor <math><mrow><mfrac><mrow><mn>1</mn></mrow><mrow><mn>5</mn></mrow></mfrac><mo>=</mo><mn>0.2</mn></mrow></math></span></div></div>
+      <div class="cmath"><math><mrow><mtext>confidence</mtext><mo>=</mo><mfrac><mrow><mrow><mn>0.6</mn><mo>−</mo><mn class="kb">0.2</mn></mrow></mrow><mrow><mrow><mn>1</mn><mo>−</mo><mn class="kb">0.2</mn></mrow></mrow></mfrac><mo>=</mo><mn>0.50</mn></mrow></math></div>
+      <div class="cfoot"><span>Top probability <b>0.60</b></span><span>Choice confidence <b class="lo">0.50</b></span><span class="cmp">Your code can also compute</span><span>Top-to-second ratio <b>6.0</b></span></div>
+    </div></div>
+    <p class="cnote">The raw top probability is <b>0.60</b> every time, yet confidence goes from <b>0.20</b> to <b>0.50</b>. A threshold on p<sub>max</sub> alone would treat a near coin-flip and a strong lead the same way.</p>
+  </div>
+
+  <div class="subhead">
+    <div class="eyebrow">Try it yourself</div>
+    <h3>Interactive examples</h3>
+    <p class="subline">Pick an example or drag the bars. Every number below updates live.</p>
+  </div>
+
+  <div class="bench">
+    <div class="toolbar"><span>Examples</span>
+      <button data-cp="docs" class="on">Docs: ticket routing</button>
+      <button data-cp="six">Docs: 0.6 / 0.3 / 0.1</button>
+      <button data-cp="unif">Uniform</button>
+      <button data-cp="sure">Certain</button>
+      <button data-cp="twin">Blind spot</button>
+    </div>
+    <div class="toolbar"><span>Options</span><button data-cn="-">− remove</button><button data-cn="+">+ add</button></div>
+    <div class="rows" id="t-cRows"></div>
+    <div class="mapper">
+      <div class="mtag">probability scale · <span>where p<sub>max</sub> sits</span></div>
+      <div class="ruler" id="t-cRuler"></div>
+      <svg id="t-cMap" class="map" viewBox="0 0 100 60" preserveAspectRatio="none" aria-hidden="true"></svg>
+      <div class="ruler conf" id="t-cConf"></div>
+      <div class="mtag">confidence scale · <span>the same point, stretched so 1/n becomes 0. The Low / Medium / High bands and the 0.5 and 0.7 cut-offs are illustrative: each application sets its own, based on the risk and cost of a wrong decision.</span></div>
+    </div>
+    <div class="pcap" id="t-cCap">
+      <div class="caphead"><div class="eyebrow">Docs example · ticket routing</div><span class="capstat"><span class="on">✓ Matches the docs example</span><span class="offt">Your values differ from the docs example. Pick “Docs: ticket routing” to restore it.</span></span></div>
+      <q>Shoes arrived two weeks late and in the wrong size. Also I see two charges of $120 on my card.</q>
+      <p>Jev picks <b>returns</b>, but the double charge pulls weight toward billing: confidence = (0.61 − 0.333) / 0.667 ≈ <b>0.42</b>, a moderate answer.</p>
+    </div>
+    <div class="mcalc" id="t-cFacts" aria-live="polite"></div>
+    <details class="fold" id="t-cFold"><summary>Calculation <span>formula and alternative metrics</span></summary><div class="mcalc" id="t-cCalc" aria-live="polite"></div></details>
+    <div class="result"><div class="big" id="t-cOut"></div><span class="pill" id="t-cPill"></span><span id="t-cMsg" style="color:var(--muted);font-size:.9rem"></span></div>
+  </div>
+
+  <details class="fold apifold" id="t-api">
+    <summary>API request and response <span>what your code sends to Jev and what comes back, for the bars above</span></summary>
+    <div class="apibody">
+      <div class="apiflow" aria-hidden="true">
+        <span class="node">Your code</span><span class="arr">POST /v1/systemone →</span><span class="node jev">Jev</span><span class="arr">← JSON answer</span><span class="node">Your code computes the ratio and routes</span>
+      </div>
+      <div class="ctabs" role="tablist" aria-label="Code view">
+        <button role="tab" data-v="req" aria-selected="true">1 · Request (JSON)</button>
+        <button role="tab" data-v="sdk" aria-selected="false">1 · Request (Python SDK)</button>
+        <button role="tab" data-v="res" aria-selected="false">2 · Response (JSON)</button>
+        <button role="tab" data-v="use" aria-selected="false">3 · Your code: ratio and routing</button>
+      </div>
+      <div class="codewrap">
+        <div class="codehead"><span class="cmeta"></span><button class="copy" type="button">Copy</button></div>
+        <pre class="code"><code></code></pre>
+      </div>
+      <p class="apinote"></p>
+    </div>
+  </details>
+
+  <div class="insight">
+    <div class="insl">
+      <div class="eyebrow">Key insight</div>
+      <h3>The blind spot</h3>
+      <p><math><mrow><mi>p</mi><mo>=</mo><mrow><mo>(</mo><mrow><mn>0.6</mn><mo>,</mo><mn>0.4</mn><mo>,</mo><mn>0</mn></mrow><mo>)</mo></mrow></mrow></math> and <math><mrow><mi>p</mi><mo>=</mo><mrow><mo>(</mo><mrow><mn>0.6</mn><mo>,</mo><mn>0.2</mn><mo>,</mo><mn>0.2</mn></mrow><mo>)</mo></mrow></mrow></math> both give <b>0.40</b>. The formula looks only at <math><msub><mi>p</mi><mrow><mtext>max</mtext></mrow></msub></math>, so a close two-way race scores the same as one leader with scattered runners-up. TypeSafe lists the top-to-second ratio <math><mfrac><mrow><msub><mi>p</mi><mrow><mtext>max</mtext></mrow></msub></mrow><mrow><msub><mi>p</mi><mrow><mtext>2nd</mtext></mrow></msub></mrow></mfrac></math> as an alternative when you care about that race.</p>
+    </div>
+    <div class="insr">
+      <div class="dcard"><div class="dhead">Close two-way race</div><div class="dist"><div class="dcol"><div class="dbar"><i style="height:60.0%"></i></div><span>A</span><em>0.6</em></div><div class="dcol"><div class="dbar"><i style="height:40.0%"></i></div><span>B</span><em>0.4</em></div><div class="dcol"><div class="dbar"><i style="height:0%"></i></div><span>C</span><em>0</em></div></div><div class="dmetrics"><div class="dconf"><b>0.40</b><span>Confidence · same in both</span></div><div class="dratio"><math><mrow><mfrac><msub><mi>p</mi><mtext>max</mtext></msub><msub><mi>p</mi><mtext>2nd</mtext></msub></mfrac><mo>=</mo><mfrac><mn>0.6</mn><mn>0.4</mn></mfrac><mo>=</mo></mrow></math><b>1.5</b><span>Top-to-second ratio · tells them apart</span></div></div></div>
+      <div class="dcard"><div class="dhead">One leader, scattered rest</div><div class="dist"><div class="dcol"><div class="dbar"><i style="height:60.0%"></i></div><span>A</span><em>0.6</em></div><div class="dcol"><div class="dbar"><i style="height:20.0%"></i></div><span>B</span><em>0.2</em></div><div class="dcol"><div class="dbar"><i style="height:20.0%"></i></div><span>C</span><em>0.2</em></div></div><div class="dmetrics"><div class="dconf"><b>0.40</b><span>Confidence · same in both</span></div><div class="dratio"><math><mrow><mfrac><msub><mi>p</mi><mtext>max</mtext></msub><msub><mi>p</mi><mtext>2nd</mtext></msub></mfrac><mo>=</mo><mfrac><mn>0.6</mn><mn>0.2</mn></mfrac><mo>=</mo></mrow></math><b>3.0</b><span>Top-to-second ratio · tells them apart</span></div></div></div>
+    </div>
+  </div>
+</section>
+
+</div>
+<div class="wrap" id="tab-score" role="tabpanel" hidden>
+<section id="k-score">
+  <div class="eyebrow">Primitive 2 · ordered levels</div>
+  <h2>Score</h2>
+  <p>Rate something on an ordered scale of 2 to 10 described levels: bug severity, formality, satisfaction. Order changes the question. Being split between neighbours (1 vs 2) is a small doubt; being split between opposite ends (0 vs 2) means the model has no idea. So Score confidence measures <em>how far</em> the probability sits from the peak, not just how tall the peak is.</p>
+  <div class="fields">
+    <div class="fieldshead">
+      <div class="eyebrow">What a Score answer contains</div>
+      <p>One answer, four fields. This tab is about <code>confidence</code>, but you read it together with the other three. Values from the docs' PDF-export example.</p>
+    </div>
+    <div class="fgrid">
+      <div class="ftile"><code>score</code><div class="fval">1.11</div><b>Where</b><span>The average level: each level times its probability, added up. A position on the 0 to 2 scale.</span></div>
+      <div class="ftile on"><code>confidence</code><div class="fval">0.84</div><b>How much to trust it</b><span>0 to 1, from how far the probability sits from the peak. Explained on this tab.</span></div>
+      <div class="ftile"><code>probabilities</code><div class="fval"><span class="fmini" aria-hidden="true"><i style="height:4%"></i><i style="height:89%"></i><i style="height:11%"></i></span><small>0 · 0.89 · 0.11</small></div><b>The shape</b><span>The full split across levels. Shows whether there is one story or two.</span></div>
+      <div class="ftile"><code>legend</code><div class="fval small">0 → "Cosmetic…"<br>1 → "Workaround…"<br>2 → "Blocking…"</div><b>The labels</b><span>The text of each level, so your code can show what a number means.</span></div>
+    </div>
+  </div>
+
+  <div class="defcard wide">
+    <div class="def">
+      <div class="eyebrow">Definitions · TypeSafe docs</div>
+      <div class="dfield"><code class="ks">score</code><blockquote class="qs">The position on the level number line, from 0 to the top level number. It's each level number multiplied by its probability, added up.</blockquote></div>
+      <div class="dfield"><code class="kc">confidence</code><blockquote>A number from 0 to 1 computed from how <code>probabilities</code> is spread. A single peak on one level means high confidence.</blockquote>
+      <blockquote class="q2">Probability on a neighboring level lowers confidence less than the same probability on a level further away.</blockquote></div>
+      <div class="shapes"><span><span class="mini" aria-hidden="true"><i style="height:4%"></i><i style="height:92%"></i><i style="height:4%"></i></span>single peak → high</span><span><span class="mini" aria-hidden="true"><i style="height:4%"></i><i style="height:50%"></i><i style="height:50%"></i></span>neighbours → lower</span><span><span class="mini" aria-hidden="true"><i style="height:50%"></i><i style="height:4%"></i><i style="height:50%"></i></span>opposite ends → zero</span></div>
+      <div class="srcs"><a class="src" href="https://docs.typesafe.ai/primitives/score">docs.typesafe.ai/primitives/score</a><a class="src" href="https://docs.typesafe.ai/confidence">docs.typesafe.ai/confidence</a></div>
+    </div>
+    <div class="defmath">
+      <div class="eyebrow">Formulas</div>
+      <div class="formula ftop"><div class="flab ks">score</div><math display="block"><mrow><mtext class="ks">score</mtext><mo>=</mo><munderover><mo>∑</mo><mrow><mi>i</mi><mo>=</mo><mn>0</mn></mrow><mrow><mi>n</mi><mo>−</mo><mn>1</mn></mrow></munderover><mi>i</mi><mo>·</mo><msub><mi>p</mi><mi>i</mi></msub></mrow></math><div class="flab kc">confidence</div><math display="block"><mrow><mtext>confidence</mtext><mo>=</mo><mi>max</mi><mrow><mo>(</mo><mrow><mn>0</mn><mo>,</mo><mspace width="0.4em"></mspace><mn>1</mn><mo>−</mo><mfrac><mrow><mrow><munder><mo>∑</mo><mrow><mi>i</mi></mrow></munder><msub><mi>p</mi><mrow><mi>i</mi></mrow></msub><mrow><mo>|</mo><mrow><mi>i</mi><mo>−</mo><mi class="ka">m</mi></mrow><mo>|</mo></mrow></mrow></mrow><mrow><msub><mtext class="kb">MAD</mtext><mtext>unif</mtext></msub></mrow></mfrac></mrow><mo>)</mo></mrow></mrow></math><math display="block"><mrow><msub><mtext class="kb">MAD</mtext><mtext>unif</mtext></msub><mo>=</mo><mfrac><mrow><mn>1</mn></mrow><mrow><mi>n</mi></mrow></mfrac><munderover><mo>∑</mo><mrow><mrow><mi>i</mi><mo>=</mo><mn>0</mn></mrow></mrow><mrow><mrow><mi>n</mi><mo>−</mo><mn>1</mn></mrow></mrow></munderover><mrow><mo>|</mo><mrow><mi>i</mi><mo>−</mo><mfrac><mrow><mrow><mi>n</mi><mo>−</mo><mn>1</mn></mrow></mrow><mrow><mn>2</mn></mrow></mfrac></mrow><mo>|</mo></mrow></mrow></math></div>
+    </div>
+    <div class="symrow four">
+      <div class="sym"><math><mi>n</mi></math><span><b>Levels</b>how many levels the scale has, numbered 0 to n−1</span></div>
+      <div class="sym kb"><math><msub><mtext class="kb">MAD</mtext><mtext>unif</mtext></msub></math><span><b>Ignorance spread</b>the average distance if every level were equally likely</span></div>
+      <div class="sym ka"><math><mi class="ka">m</mi></math><span><b>Peak</b>the most likely level</span></div>
+      <div class="sym"><math><mrow><mi>d</mi><mo>=</mo><munder><mo>∑</mo><mrow><mi>i</mi></mrow></munder><msub><mi>p</mi><mrow><mi>i</mi></mrow></msub><mrow><mo>|</mo><mrow><mi>i</mi><mo>−</mo><mi class="ka">m</mi></mrow><mo>|</mo></mrow></mrow></math><span><b>Expected distance</b>how far, on average, the probability sits from the peak</span></div>
+    </div>
+  </div>
+
+  <details class="intuit">
+    <summary><span class="eyebrow">Intuition builder</span><span class="ititle">Read it as a distance check</span></summary>
+    <div class="ibody">
+    <p class="iq">How far is the probability from the peak, compared with how far it would be under <b>total ignorance</b>?</p>
+    <div class="ianchors">
+      <div class="ia hi"><span class="iak"><math><mrow><mi>d</mi><mo>=</mo><mn>0</mn></mrow></math></span><span>All the probability sits on the peak.</span><b>confidence 1</b></div>
+      <div class="ia mid"><span class="iak"><math><mrow><mn>0</mn><mo>&lt;</mo><mi>d</mi><mo>&lt;</mo><msub><mtext class="kb">MAD</mtext><mtext>unif</mtext></msub></mrow></math></span><span>Some probability sits away from the peak.</span><b>between 0 and 1</b></div>
+      <div class="ia lo"><span class="iak"><math><mrow><mi>d</mi><mo>≥</mo><msub><mtext class="kb">MAD</mtext><mtext>unif</mtext></msub></mrow></math></span><span>As spread out as total ignorance, or worse.</span><b>confidence 0</b></div>
+    </div>
+    <div class="idef">
+      <div class="idtext">
+        <h4>What "total ignorance" means here</h4>
+        <p>A model with no idea which level is right gives every level the same probability, <math><mfrac><mn>1</mn><mi>n</mi></mfrac></math>. That flat answer has no peak, so its spread is measured from the middle of the scale. The average distance it ends up with is the <b class="kbt">ignorance spread</b>, <math><msub><mtext class="kb">MAD</mtext><mtext>unif</mtext></msub></math>: the yardstick every real answer is compared against.</p>
+        <p>More levels means a bigger yardstick, because a flat answer over a long scale is spread further.</p>
+      </div>
+      <div class="ucards"><div class="ucard"><div class="uhead">3 levels, all equally likely</div><div class="ucols"><div class="ucol"><div class="ubar"><i style="height:33%"></i></div><em>0.33</em><span>0</span><b>1</b></div><div class="ucol"><div class="ubar"><i style="height:33%"></i></div><em>0.33</em><span>1</span><b>0</b></div><div class="ucol"><div class="ubar"><i style="height:33%"></i></div><em>0.33</em><span>2</span><b>1</b></div></div><div class="ulegend"><span>probability</span><span>level</span><span>distance from the middle</span></div><div class="umath"><math><mrow><msub><mtext class="kb">MAD</mtext><mtext>unif</mtext></msub><mo>=</mo><mfrac><mrow><mrow><mn>1</mn><mo>+</mo><mn>0</mn><mo>+</mo><mn>1</mn></mrow></mrow><mrow><mn>3</mn></mrow></mfrac><mo>=</mo><mn class="kb">0.667</mn></mrow></math></div></div><div class="ucard"><div class="uhead">5 levels, all equally likely</div><div class="ucols"><div class="ucol"><div class="ubar"><i style="height:20%"></i></div><em>0.20</em><span>0</span><b>2</b></div><div class="ucol"><div class="ubar"><i style="height:20%"></i></div><em>0.20</em><span>1</span><b>1</b></div><div class="ucol"><div class="ubar"><i style="height:20%"></i></div><em>0.20</em><span>2</span><b>0</b></div><div class="ucol"><div class="ubar"><i style="height:20%"></i></div><em>0.20</em><span>3</span><b>1</b></div><div class="ucol"><div class="ubar"><i style="height:20%"></i></div><em>0.20</em><span>4</span><b>2</b></div></div><div class="ulegend"><span>probability</span><span>level</span><span>distance from the middle</span></div><div class="umath"><math><mrow><msub><mtext class="kb">MAD</mtext><mtext>unif</mtext></msub><mo>=</mo><mfrac><mrow><mrow><mn>2</mn><mo>+</mo><mn>1</mn><mo>+</mo><mn>0</mn><mo>+</mo><mn>1</mn><mo>+</mo><mn>2</mn></mrow></mrow><mrow><mn>5</mn></mrow></mfrac><mo>=</mo><mn class="kb">1.2</mn></mrow></math></div></div></div>
+    </div>
+  </div>
+  </details>
+
+  <div class="cases">
+    <div class="subhead">
+      <div class="eyebrow">Bug severity · 5 levels</div>
+      <h3>Three fixed cases</h3>
+      <p class="subline">Same top probability, different confidence</p>
+    </div>
+    <div class="caseshead">
+      <div class="caselead">
+      <p>In all 3 examples the peak is fixed: <b>0.6</b> sits on the highest level of the severity scale, Blocker (level 4, the 5th level, because levels are numbered from 0).</p>
+      <p>The remaining <b>0.4</b> moves. The further it sits from the peak, the more it lowers score confidence.</p>
+      <p>In financial terms, each unit of distance from the peak costs confidence, and the budget is the ignorance spread. For 5 levels that budget is <math><mrow><msub><mtext class="kb">MAD</mtext><mtext>unif</mtext></msub><mo>=</mo><mfrac><mrow><mrow><mn>2</mn><mo>+</mo><mn>1</mn><mo>+</mo><mn>0</mn><mo>+</mo><mn>1</mn><mo>+</mo><mn>2</mn></mrow></mrow><mrow><mn>5</mn></mrow></mfrac><mo>=</mo><mn class="kb">1.2</mn></mrow></math>.</p>
+    </div>
+    </div>
+    <div class="cgrid"><div class="ccard">
+      <div class="chead"><b>Runner-up next door</b><span class="pill mid">0.67</span></div>
+      <p class="cgloss">"Blocker, maybe only critical." A small doubt.</p>
+      <div class="cchart"><div class="ccols"><div class="ccol "><div class="cbar"><i style="height:0%"></i></div><em>0.0</em><span>0</span><small>Cosmetic</small></div><div class="ccol "><div class="cbar"><i style="height:0%"></i></div><em>0.0</em><span>1</span><small>Minor</small></div><div class="ccol "><div class="cbar"><i style="height:0%"></i></div><em>0.0</em><span>2</span><small>Major</small></div><div class="ccol ru"><div class="cbar"><i style="height:40%"></i></div><em>0.4</em><span>3</span><small>Critical</small></div><div class="ccol pk"><div class="cbar"><i style="height:60%"></i></div><em>0.6</em><span>4</span><small>Blocker</small></div></div><div class="cbrk" style="left:70.0%;width:20.0%"><span>distance 1</span></div></div>
+      <div class="cmath"><math><mrow><mi>d</mi><mo>=</mo><mn>0.4</mn><mo>×</mo><mn>1</mn><mo>=</mo><mn>0.4</mn></mrow></math><math><mrow><mtext>confidence</mtext><mo>=</mo><mn>1</mn><mo>−</mo><mfrac><mrow><mn>0.4</mn></mrow><mrow><mn class="kb">1.2</mn></mrow></mfrac><mo>=</mo><mn>0.67</mn></mrow></math></div>
+      <div class="cfoot"><span>Score <b>3.6</b></span><span>Score confidence <b class="mid">0.67</b></span><span class="cmp">Comparing with Choice primitive</span><span>Choice confidence <b>0.50</b></span></div>
+    </div><div class="ccard">
+      <div class="chead"><b>Runner-up two away</b><span class="pill lo">0.33</span></div>
+      <p class="cgloss">"Blocker, or only major." A real doubt.</p>
+      <div class="cchart"><div class="ccols"><div class="ccol "><div class="cbar"><i style="height:0%"></i></div><em>0.0</em><span>0</span><small>Cosmetic</small></div><div class="ccol "><div class="cbar"><i style="height:0%"></i></div><em>0.0</em><span>1</span><small>Minor</small></div><div class="ccol ru"><div class="cbar"><i style="height:40%"></i></div><em>0.4</em><span>2</span><small>Major</small></div><div class="ccol "><div class="cbar"><i style="height:0%"></i></div><em>0.0</em><span>3</span><small>Critical</small></div><div class="ccol pk"><div class="cbar"><i style="height:60%"></i></div><em>0.6</em><span>4</span><small>Blocker</small></div></div><div class="cbrk" style="left:50.0%;width:40.0%"><span>distance 2</span></div></div>
+      <div class="cmath"><math><mrow><mi>d</mi><mo>=</mo><mn>0.4</mn><mo>×</mo><mn>2</mn><mo>=</mo><mn>0.8</mn></mrow></math><math><mrow><mtext>confidence</mtext><mo>=</mo><mn>1</mn><mo>−</mo><mfrac><mrow><mn>0.8</mn></mrow><mrow><mn class="kb">1.2</mn></mrow></mfrac><mo>=</mo><mn>0.33</mn></mrow></math></div>
+      <div class="cfoot"><span>Score <b>3.2</b></span><span>Score confidence <b class="lo">0.33</b></span><span class="cmp">Comparing with Choice primitive</span><span>Choice confidence <b>0.50</b></span></div>
+    </div><div class="ccard">
+      <div class="chead"><b>Runner-up at the far end</b><span class="pill lo">0.00</span></div>
+      <p class="cgloss">"Blocker, or cosmetic?" Not understood.</p>
+      <div class="cchart"><div class="ccols"><div class="ccol ru"><div class="cbar"><i style="height:40%"></i></div><em>0.4</em><span>0</span><small>Cosmetic</small></div><div class="ccol "><div class="cbar"><i style="height:0%"></i></div><em>0.0</em><span>1</span><small>Minor</small></div><div class="ccol "><div class="cbar"><i style="height:0%"></i></div><em>0.0</em><span>2</span><small>Major</small></div><div class="ccol "><div class="cbar"><i style="height:0%"></i></div><em>0.0</em><span>3</span><small>Critical</small></div><div class="ccol pk"><div class="cbar"><i style="height:60%"></i></div><em>0.6</em><span>4</span><small>Blocker</small></div></div><div class="cbrk" style="left:10.0%;width:80.0%"><span>distance 4</span></div></div>
+      <div class="cmath"><math><mrow><mi>d</mi><mo>=</mo><mn>0.4</mn><mo>×</mo><mn>4</mn><mo>=</mo><mn>1.6</mn></mrow></math><math><mrow><mtext>confidence</mtext><mo>=</mo><mn>1</mn><mo>−</mo><mfrac><mrow><mn>1.6</mn></mrow><mrow><mn class="kb">1.2</mn></mrow></mfrac><mo>=</mo><mn>-0.33</mn></mrow></math><div class="cclamp">below 0, clamped to <b>0</b></div></div>
+      <div class="cfoot"><span>Score <b>2.4</b></span><span>Score confidence <b class="lo">0.00</b></span><span class="cmp">Comparing with Choice primitive</span><span>Choice confidence <b>0.50</b></span></div>
+    </div></div>
+    <p class="cnote">The Choice formula sees only the 0.6 and gives <b>0.50</b> every time. Score confidence falls from <b>0.67</b> to <b>0</b> as the runner-up moves away. Watch the <code>score</code> field too: in the third case it averages to 2.4, "Major", a level the model gave no probability at all.</p>
+  </div>
+
+  <div class="subhead">
+    <div class="eyebrow">Try it yourself</div>
+    <h3>Interactive examples</h3>
+    <p class="subline">Pick an example or drag the bars. Every number below updates live.</p>
+  </div>
+
+  <div class="bench">
+    <div class="toolbar"><span class="tlab2">Severity · 5 levels</span>
+      <button data-kp="next" class="on">Runner-up next door</button>
+      <button data-kp="two">Two away</button>
+      <button data-kp="far">Far end</button>
+      <button data-kp="clear">Clear blocker</button>
+      <button data-kp="spread">Spread around Major</button>
+      <button data-kp="tie">Tie</button>
+    </div>
+    <div class="toolbar"><span class="tlab2">Docs · 3 levels</span>
+      <button data-kp="docs">PDF export bug</button>
+      <button data-kp="split">0 / 0.57 / 0.43</button>
+      <button data-kp="adj">Neighbours</button>
+      <button data-kp="ends">Opposite ends</button>
+    </div>
+    <div class="toolbar"><span>Levels</span><button data-kn="-">− remove</button><button data-kn="+">+ add</button></div>
+    <div class="rows" id="k-sRows"></div>
+    <div class="mapper">
+      <div class="mtag">spread scale · <span>expected distance from the peak</span></div>
+      <div class="ruler" id="k-sRuler"></div>
+      <svg id="k-sMap" class="map" viewBox="0 0 100 60" preserveAspectRatio="none" aria-hidden="true"></svg>
+      <div class="ruler conf" id="k-sConf"></div>
+      <div class="mtag">confidence scale · <span>the same point, flipped: zero distance becomes 1 and the ignorance spread becomes 0. The Low / Medium / High bands and the 0.5 and 0.7 cut-offs are illustrative: each application sets its own, based on the risk and cost of a wrong decision.</span></div>
+      <div class="sbarwrap">
+        <div class="mtag">score scale · <span>where the average lands, from level 0 to the top level. The score is the balance point of the bars.</span></div>
+        <div class="sbar" id="k-sScore"></div>
+      </div>
+    </div>
+    <div class="pcap" id="k-sCap">
+      <div class="caphead"><div class="eyebrow">Docs example · PDF export bug</div><span class="capstat"><span class="on">✓ Matches the docs example</span><span class="offt">Your values differ from the docs example. Pick “PDF export bug” to restore it.</span></span></div>
+      <q>Export to PDF fails with a spinner that never finishes. Some of our team say CSV export still works for them, others say it fails too.</q>
+      <p>The peak is level 1, "workaround exists". The 0.11 on "blocking" is only one level away, so it costs little: confidence = 1 − 0.11 / 0.667 ≈ <b>0.84</b>, and the score lands at <b>1.11</b>, just past the peak.</p>
+    </div>
+    <div class="mcalc" id="k-sFacts" aria-live="polite"></div>
+    <details class="fold" id="k-sFold"><summary>Calculation <span>formula, the score field and a comparison with Choice</span></summary><div class="mcalc" id="k-sCalc" aria-live="polite"></div></details>
+    <div class="result"><div class="big" id="k-sOut"></div><span class="pill" id="k-sPill"></span><span id="k-sMsg" style="color:var(--muted);font-size:.9rem"></span></div>
+  </div>
+
+  <details class="fold apifold" id="k-api">
+    <summary>API request and response <span>what your code sends to Jev and what comes back, for the bars above</span></summary>
+    <div class="apibody">
+      <div class="apiflow" aria-hidden="true">
+        <span class="node">Your code</span><span class="arr">POST /v1/systemone →</span><span class="node jev">Jev</span><span class="arr">← JSON answer</span><span class="node">Your code normalises the score and routes</span>
+      </div>
+      <div class="ctabs" role="tablist" aria-label="Code view">
+        <button role="tab" data-v="req" aria-selected="true">1 · Request (JSON)</button>
+        <button role="tab" data-v="sdk" aria-selected="false">1 · Request (Python SDK)</button>
+        <button role="tab" data-v="res" aria-selected="false">2 · Response (JSON)</button>
+        <button role="tab" data-v="use" aria-selected="false">3 · Your code: normalise and route</button>
+      </div>
+      <div class="codewrap">
+        <div class="codehead"><span class="cmeta"></span><button class="copy" type="button">Copy</button></div>
+        <pre class="code"><code></code></pre>
+      </div>
+      <p class="apinote"></p>
+    </div>
+  </details>
+
+
+  <div class="insight">
+    <div class="insl">
+      <div class="eyebrow">Key insight</div>
+      <h3>The average hides disagreement</h3>
+      <p>The <code>score</code> field is an average: each level times its probability, added up. Very different answers can share it. Below, a model that is sure the bug has a workaround and a model split between "cosmetic" and "blocking" both return score 1.00. Only confidence tells them apart, which is why you read the two fields together. The Choice formula would not help either: the docs' neighbours case (0, 0.5, 0.5) and opposite-ends case (0.5, 0, 0.5) have the same top probability, but Score confidence gives them 0.25 and 0.</p>
+    </div>
+    <div class="insr">
+      <div class="dcard"><div class="dhead">Everyone agrees: workaround</div><div class="dist"><div class="dcol"><div class="dbar"><i style="height:0%"></i></div><span>0</span><em>0</em></div><div class="dcol"><div class="dbar"><i style="height:100%"></i></div><span>1</span><em>1</em></div><div class="dcol"><div class="dbar"><i style="height:0%"></i></div><span>2</span><em>0</em></div></div><div class="dmetrics"><div class="dconf"><b>1.00</b><span>Score · same in both</span></div><div class="dratio"><b>1.00</b><span>Confidence · tells them apart</span></div></div></div>
+      <div class="dcard"><div class="dhead">Split between the extremes</div><div class="dist"><div class="dcol"><div class="dbar"><i style="height:50.0%"></i></div><span>0</span><em>0.5</em></div><div class="dcol"><div class="dbar"><i style="height:0%"></i></div><span>1</span><em>0</em></div><div class="dcol"><div class="dbar"><i style="height:50.0%"></i></div><span>2</span><em>0.5</em></div></div><div class="dmetrics"><div class="dconf"><b>1.00</b><span>Score · same in both</span></div><div class="dratio"><b>0.00</b><span>Confidence · tells them apart</span></div></div></div>
+    </div>
+  </div>
+
+  <div class="opennote">
+    <div class="eyebrow">Open question · not in the docs</div>
+    <p><strong>Which level is the peak when two levels tie?</strong> The docs define <math><mi>m</mi></math> as "the most likely level" but don't say how ties are broken, and it changes the answer. For (0.4, 0.4, 0.2), choosing level 0 as the peak gives confidence 0; choosing level 1 gives 0.10. This page takes the lowest tied level. Try the "Tie" example, and check against a real Jev response before relying on it.</p>
+  </div>
+</section>
+</div>
+<div class="wrap" id="tab-which" role="tabpanel" hidden>
+<section id="w-which">
+  <div class="eyebrow">How to use · picking the question type</div>
+  <h2>Choice, Score or Noul?</h2>
+  <p class="lede">Start with the shape of the answer. <b>Yes or no?</b> Use <b>Noul</b>. <b>One of several options with no order?</b> Use <b>Choice</b>. <b>A position on an ordered scale?</b> Use <b>Score</b>. For the last two, one question decides it: <em>is a near miss less wrong than a far miss?</em></p>
+
+  <div class="tbl wtbl"><table>
+    <thead><tr><th></th><th><span class="wtag n">Noul</span></th><th><span class="wtag c">Choice</span></th><th><span class="wtag s">Score</span></th></tr></thead>
+    <tbody>
+      <tr><th>The answer is</th><td>Yes or no</td><td>One of several unordered categories</td><td>A level on one ordered scale</td></tr>
+      <tr><th>Near miss vs far miss</th><td>Only two answers, so no distance</td><td>All mistakes are equally wrong</td><td>One step off is less wrong than three steps off</td></tr>
+      <tr><th>Main output</th><td><code>noul</code>: probability of yes</td><td><code>choice</code>: which option, plus <code>probabilities</code></td><td><code>score</code>: where on the scale, plus <code>probabilities</code></td></tr>
+      <tr><th>Confidence</th><td>Not returned. Optional: <code>|2p − 1|</code>, distance from 0.5</td><td>How far the top option rises above an even split</td><td>How far the probability sits from the peak</td></tr>
+      <tr><th>Examples</th><td>Asks for a refund? Contains personal data? Wants a human?</td><td>Department, product category, language, intent</td><td>Severity, urgency, satisfaction, formality, fit</td></tr>
+      <tr><th>Your code typically</th><td>Compares with a threshold; combines several Nouls with AND / OR</td><td>Routes to one handler</td><td>Sorts, prioritises, applies thresholds, feeds a weighted total</td></tr>
+      <tr><th>Watch out for</th><td>Two conditions in one question; questions phrased so that yes means "absent"</td><td>Using it on an ordered scale: distance information is lost</td><td>Using it on unordered categories: distances are made up</td></tr>
+    </tbody></table></div>
+  <p class="cite">TypeSafe's own guidance agrees: Score is not for discrete unordered categories, and plain yes/no questions belong to Noul. <a href="https://docs.typesafe.ai/primitives/score">Score docs</a> · <a href="https://docs.typesafe.ai/primitives/choice">Choice docs</a> · <a href="https://docs.typesafe.ai/primitives/noul">Noul docs</a></p>
+
+  <div class="subhead">
+    <div class="eyebrow">If you're unsure</div>
+    <h3>Three quick tests</h3>
+    <p class="subline">For Choice versus Score. If any of them says "order matters", use Score.</p>
+  </div>
+  <div class="wgrid3">
+    <div class="wcard"><div class="wnum">1</div><h4>Would averaging two answers make sense?</h4>
+      <div class="wpair"><div class="wex s"><b>Minor + Critical</b><span>≈ Major. It means something.</span></div><div class="wex c"><b>billing + shipping</b><span>= nothing. There is no "half-way".</span></div></div>
+      <p>Meaningful average → Score.</p></div>
+    <div class="wcard"><div class="wnum">2</div><h4>Does reordering the options change anything?</h4>
+      <div class="wpair"><div class="wex c"><b>Shuffle departments</b><span>Nothing changes.</span></div><div class="wex s"><b>Shuffle severities</b><span>The scale stops making sense.</span></div></div>
+      <p>Order carries meaning → Score.</p></div>
+    <div class="wcard"><div class="wnum">3</div><h4>What does your code do with the answer?</h4>
+      <div class="wpair"><div class="wex c"><b>Pick a handler</b><span>Send to one team or one flow.</span></div><div class="wex s"><b>Use a number</b><span>Rank, sort, threshold, weight.</span></div></div>
+      <p>Needs a position → Score.</p></div>
+  </div>
+
+  <div class="subhead">
+    <div class="eyebrow">Picking the wrong one</div>
+    <h3>What goes wrong</h3>
+    <p class="subline">Both mistakes give you a confidence number that looks fine and means the wrong thing.</p>
+  </div>
+  <div class="wgrid2">
+    <div class="wcard bad">
+      <div class="wtagrow"><span class="wtag c">Choice</span> used on an ordered scale</div>
+      <h4>Distance information is lost</h4>
+      <div class="wpairbars">
+        <div><div class="wbars "><div class="wcol"><div class="wbar"><i style="height:0%"></i></div><span>0</span></div><div class="wcol"><div class="wbar"><i style="height:0%"></i></div><span>1</span></div><div class="wcol"><div class="wbar"><i style="height:0%"></i></div><span>2</span></div><div class="wcol"><div class="wbar"><i style="height:40%"></i></div><span>3</span></div><div class="wcol"><div class="wbar"><i style="height:60%"></i></div><span>4</span></div></div><small>Blocker, maybe Critical</small></div>
+        <div><div class="wbars "><div class="wcol"><div class="wbar"><i style="height:40%"></i></div><span>0</span></div><div class="wcol"><div class="wbar"><i style="height:0%"></i></div><span>1</span></div><div class="wcol"><div class="wbar"><i style="height:0%"></i></div><span>2</span></div><div class="wcol"><div class="wbar"><i style="height:0%"></i></div><span>3</span></div><div class="wcol"><div class="wbar"><i style="height:60%"></i></div><span>4</span></div></div><small>Blocker, or Cosmetic?</small></div>
+      </div>
+      <p>Choice gives both <b>0.50</b>. It can't tell a close call from a model that hasn't understood the ticket. Score gives them 0.67 and 0.</p>
+    </div>
+    <div class="wcard bad">
+      <div class="wtagrow"><span class="wtag s">Score</span> used on unordered categories</div>
+      <h4>Distances are made up</h4>
+      <div class="wpairbars">
+        <div><div class="wbars wide"><div class="wcol"><div class="wbar"><i style="height:0%"></i></div><span>returns</span></div><div class="wcol"><div class="wbar"><i style="height:50%"></i></div><span>billing</span></div><div class="wcol"><div class="wbar"><i style="height:50%"></i></div><span>shipping</span></div></div><small>billing next to shipping</small></div>
+        <div><div class="wbars wide"><div class="wcol"><div class="wbar"><i style="height:50%"></i></div><span>billing</span></div><div class="wcol"><div class="wbar"><i style="height:0%"></i></div><span>returns</span></div><div class="wcol"><div class="wbar"><i style="height:50%"></i></div><span>shipping</span></div></div><small>same split, list reordered</small></div>
+      </div>
+      <p>The same billing/shipping split scores <b>0.25</b> or <b>0</b> depending only on the order you happened to list the options. The number means nothing.</p>
+    </div>
+  </div>
+
+  <div class="subhead" id="w-ex1">
+    <div class="eyebrow">Worked example 1 · Noul</div>
+    <h3>"Is the customer angry and asking for a refund?"</h3>
+    <p class="subline">One question with two conditions, and how to fix it</p>
+  </div>
+  <div class="exsteps">
+    <div class="exstep">
+      <div class="exnum">1</div>
+      <div class="exhead"><span class="exlab">The starting point</span><h4>Route upset refund requests to a senior agent</h4></div>
+      <p>A support team wants Jev to spot customers who are angry <i>and</i> want their money back, and send them to a senior agent. The natural first attempt is to ask exactly that, in one Noul.</p>
+      <pre class="code exq"><code><span class="k">"angry_refund"</span>: {
+  <span class="k">"type"</span>: <span class="s">"noul"</span>,
+  <span class="k">"instructions"</span>: <span class="s">"Is the customer angry and asking for a refund?"</span>
+}</code></pre>
+    </div>
+    <div class="exstep bad">
+      <div class="exnum">2</div>
+      <div class="exhead"><span class="exlab">The bad usage</span><h4>One number, three very different customers</h4></div>
+      <p>Three messages come in. The compound question squeezes each into one number, and the numbers look alike. Values are illustrative.</p>
+      <div class="tbl"><table class="extbl">
+        <thead><tr><th>Message</th><th>What is really going on</th><th><code>angry_refund</code></th></tr></thead>
+        <tbody>
+          <tr><td><q data-lint="off">Three weeks late and I'm furious. I don't want my money back, I want the order!</q></td><td>Angry, no refund</td><td class="exv mid">0.35</td></tr>
+          <tr><td><q>Hello, could you please refund order #4411? It doesn't fit.</q></td><td>Calm, wants a refund</td><td class="exv mid">0.40</td></tr>
+          <tr><td><q>This is getting annoying. Maybe I should just ask for my money back.</q></td><td>Somewhat annoyed, maybe a refund</td><td class="exv mid">0.45</td></tr>
+        </tbody></table></div>
+      <p class="exwarn">All three land around 0.4. At any threshold they are routed the same way, yet the first needs the order chased, the second needs the refund flow, and the third needs a person. The number cannot tell you which condition is uncertain, and no code can get that back.</p>
+    </div>
+    <div class="exstep good">
+      <div class="exnum">3</div>
+      <div class="exhead"><span class="exlab">The recommendation</span><h4>Two Nouls, combined in code</h4></div>
+      <p>Ask one Noul per condition, both phrased so that a high value means yes, in the same request. They run in parallel, so the second costs almost no time. Values are illustrative.</p>
+      <div class="tbl"><table class="extbl">
+        <thead><tr><th>Message</th><th><code>is_angry</code></th><th><code>wants_refund</code></th><th>Your code routes to</th></tr></thead>
+        <tbody>
+          <tr><td>Three weeks late, furious</td><td class="exv hi">0.92</td><td class="exv lo">0.06</td><td>Chase the order, apologise</td></tr>
+          <tr><td>Polite refund request</td><td class="exv lo">0.05</td><td class="exv hi">0.95</td><td>Standard refund flow</td></tr>
+          <tr><td>Annoyed, maybe a refund</td><td class="exv mid">0.62</td><td class="exv mid">0.55</td><td>A person: both are unclear</td></tr>
+        </tbody></table></div>
+      <pre class="code"><code><span class="c"># yes / no / None (unclear), with cut-offs set by the cost of each mistake</span>
+<span class="kw">def</span> read(p, yes_at, no_at):
+    <span class="kw">return</span> <span class="kw">True</span> <span class="kw">if</span> p &gt;= yes_at <span class="kw">else</span> <span class="kw">False</span> <span class="kw">if</span> p &lt;= no_at <span class="kw">else</span> <span class="kw">None</span>
+
+angry  = read(a[<span class="s">"is_angry"</span>].noul,     <span class="n">0.7</span>, <span class="n">0.3</span>)   <span class="c"># missing an angry customer is costly</span>
+refund = read(a[<span class="s">"wants_refund"</span>].noul, <span class="n">0.8</span>, <span class="n">0.2</span>)   <span class="c"># a wrong refund is costly</span>
+
+<span class="kw">if</span> angry <span class="kw">is</span> <span class="kw">None</span> <span class="kw">or</span> refund <span class="kw">is</span> <span class="kw">None</span>: send_to_person(ticket)          <span class="c"># a condition is unclear</span>
+<span class="kw">elif</span> angry <span class="kw">and</span> refund:              send_to_senior_agent(ticket)
+<span class="kw">elif</span> refund:                        start_refund_flow(ticket)
+<span class="kw">elif</span> angry:                         chase_order_and_apologise(ticket)
+<span class="kw">else</span>:                               handle_normally(ticket)</code></pre>
+      <ul class="exwhy">
+        <li><b>You choose the logic.</b> AND, OR, "angry but no refund": the business rule lives in code you can read and change.</li>
+        <li><b>Each condition gets its own thresholds</b>, set by the cost of getting that condition wrong, and a middle band where your code says "unclear" and asks a person.</li>
+        <li><b>You can see what went wrong.</b> Logs show which condition misfired, and you can check calibration per condition.</li>
+        <li><b>Phrase both so that high means yes.</b> "Is the customer angry?", not "Is the customer calm?". Then every rule reads the same way.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="subhead">
+    <div class="eyebrow">Edge cases</div>
+    <h3>When the answer isn't obvious</h3>
+  </div>
+  <div class="wedges">
+    <div class="wedge"><h4>Ordered, but each level triggers a different action</h4><p>Example: Free / Pro / Enterprise customers routed to different teams. If a near miss really is less harmful, use <b>Score</b> and act on the peak level. If any mistake is equally bad, use <b>Choice</b>.</p></div>
+    <div class="wedge"><h4>One scale mixes two things</h4><p>Example: a severity scale that blends impact and reach. Split it into separate <b>Score</b> questions, as the docs recommend, and combine them in your code.</p></div>
+    <div class="wedge"><h4>A Choice with only two options</h4><p>If the two options are really "yes" and "no", use <b>Noul</b>. One probability carries both the answer and the certainty, and the threshold stays in your code.</p></div>
+  </div>
+</section>
+</div>
+
+
+<footer class="sitefoot">
+  <div class="sfin">
+    <p><b>Jev Confidence Explained</b> · an independent, unofficial explainer by Bruno Coelho.</p>
+    <p>Not affiliated with or endorsed by TypeSafe AI. "TypeSafe" and "Jev" are names of their respective owners. Quotes are from <a href="https://docs.typesafe.ai/">docs.typesafe.ai</a>, checked on 5 October 2026; the product may have changed since. Interactive values are simulated unless marked as docs examples.</p>
+    <p class="sfsrc"><a href="https://github.com/bracoelho/jev-explainer">Source on GitHub</a> · Code <a href="https://opensource.org/license/mit">MIT</a> · Text <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a></p>
+  </div>
+</footer>
+<script>
+// ---------- MathML helpers (rendered natively by the browser) ----------
+const mi=(x,c)=>`<mi${c?` class="${c}"`:''}>${x}</mi>`, mn=(x,c)=>`<mn${c?` class="${c}"`:''}>${x}</mn>`, mo=x=>`<mo>${x}</mo>`, mt=x=>`<mtext>${x}</mtext>`;
+const R=(...a)=>`<mrow>${a.join('')}</mrow>`, FR=(a,b)=>`<mfrac>${R(a)}${R(b)}</mfrac>`;
+const SUB=(a,b,c)=>`<msub>${mi(a,c)}${R(b)}</msub>`, PMAX=c=>SUB('p',mt('max'),c), MAD=`<msub><mtext>MAD</mtext><mtext>unif</mtext></msub>`;
+const P=x=>R(mo('('),x,mo(')')), ABS=x=>R(mo('|'),x,mo('|')), SUM=(u,o)=>o?`<munderover><mo>∑</mo>${R(u)}${R(o)}</munderover>`:`<munder><mo>∑</mo>${R(u)}</munder>`;
+const IN=x=>`<math>${x}</math>`, BLOCK=x=>`<math display="block">${x}</math>`;
+// aligned derivation: rows of [lhs, rhs]; '=' sits in its own column
+const EQ=rows=>BLOCK(`<mtable displaystyle="true" columnalign="right center left">${rows.map(([l,r])=>`<mtr><mtd>${l||''}</mtd><mtd>${mo('=')}</mtd><mtd>${r}</mtd></mtr>`).join('')}</mtable>`);
+const CONF=mt('confidence');
+const distM=(i,m)=>IN(R(ABS(R(mn(i),mo('−'),mn(m))),mo('='),mn(Math.abs(i-m))));
+function mspace(){return '<mspace width="0.4em"></mspace>'}
+const f2 = x => (Math.round(x*100+1e-6)/100).toFixed(2), f3 = x => x.toFixed(3);
+const GATE={lo:0.5,hi:0.7};
+function tier(c){ return c>=GATE.hi?['High','hi','act automatically']:c>=GATE.lo?['Medium','mid','confirm or review']:['Low','lo','route to a human']; }
+function setTier(pill,msg,c){ const [t,k,m]=tier(c); pill.textContent=t; pill.className='pill '+k; msg.textContent=`Illustrative gate (${GATE.lo} / ${GATE.hi}): `+m; }
+
+// keep a distribution summing to 1 when one entry is dragged
+function adjust(p,idx,v){
+  v=Math.min(1,Math.max(0,v)); const rest=p.reduce((s,x,i)=>i===idx?s:s+x,0); const n=p.length;
+  return p.map((x,i)=> i===idx ? v : (rest>1e-9 ? x*(1-v)/rest : (1-v)/(n-1)));
+}
+function rowsHTML(prefix,labels,p,top,extra){
+  return p.map((x,i)=>`<div class="row${i===top?' top':''}"><label for="${prefix}${i}">${labels[i]}</label>
+   <div class="track"><div class="fill" style="width:${x*100}%"></div>${extra?extra(i):''}
+   <input id="${prefix}${i}" type="range" min="0" max="1" step="0.01" value="${x}" data-i="${i}" aria-label="${labels[i].replace(/<[^>]+>/g,' ')}"></div>
+   <div class="val">${f2(x)}</div></div>`).join('');
+}
+const argmax = p => p.reduce((b,x,i)=>x>p[b]?i:b,0);
+
+// ---------- CHOICE ----------
+const cPresets={docs:[['shipping','billing','returns'],[.04,.35,.61]],six:[['A','B','C'],[.6,.3,.1]],
+  unif:[['A','B','C','D'],[.25,.25,.25,.25]],sure:[['A','B','C'],[0,0,1]],twin:[['A','B','C'],[.6,.4,0]]};
+const extraNames='DEFGHIJ';
+function mountChoice(P){
+ const C={names:['shipping','billing','returns'],p:[.04,.35,.61]};
+ const $=id=>document.getElementById(P+id);
+ const scope=$('choice');
+ const apiEl=$('api'); if(apiEl) initApi(apiEl);
+ function renderChoice(rebuild=true){
+  const p=C.p,n=p.length,m=argmax(p),pm=p[m],floor=1/n,c=(pm-floor)/(1-floor);
+  if(rebuild){$('cRows').innerHTML=rowsHTML(P+'c',C.names,p,m,()=>`<div class="unif" style="left:${floor*100}%" title="1/n"></div>`);bindRows(P+'cRows',C,renderChoice);}
+  else updateRows(P+'cRows',p,m);
+  const L=x=>(x*100)+'%';
+  $('cRuler').innerHTML=`<div class="axis"></div><div class="span" style="left:${L(floor)};width:${L(1-floor)}"></div>
+   <div class="seg" style="left:${L(floor)};width:${L(Math.max(0,pm-floor))}"></div>
+   <div class="tick" style="left:0"></div><div class="lab" style="left:0%">0</div>
+   <div class="tick b" style="left:${L(floor)}"></div><div class="lab" style="left:${L(floor)};color:var(--base)">${IN(R(mn(1),mo("/"),mi("n"),mo("="),mn(f2(floor))))}</div>
+   <div class="tick" style="left:100%"></div><div class="lab" style="left:100%">1</div>
+   <div class="tick a" style="left:${L(pm)}"></div><div class="lab t" style="left:${L(Math.min(Math.max(pm,0.1),0.9))};color:var(--accent)">${IN(R(PMAX(),mo("="),mn(f2(pm))))}</div>`;
+  // shade the impossible zone below 1/n on the probability ruler
+  $('cRuler').insertAdjacentHTML('afterbegin',`<div class="void" style="left:0;width:${L(floor)}"></div>${floor>0.2?`<div class="vlab" style="left:0;max-width:calc(${L(floor)} - 4px)">impossible zone</div>`:''}`);
+  // linear map [1/n,1] -> [0,1]
+  const X1=floor*100, Xp=pm*100, Xc=c*100;
+  $('cMap').innerHTML=
+   `<polygon points="${X1},0 100,0 100,60 0,60" fill="var(--accent)" opacity=".08"/>
+    <line x1="${X1}" y1="0" x2="0" y2="60" stroke="var(--base)" stroke-width="1.5" stroke-dasharray="4 3" vector-effect="non-scaling-stroke"/>
+    <line x1="100" y1="0" x2="100" y2="60" stroke="var(--muted)" stroke-width="1.5" stroke-dasharray="4 3" vector-effect="non-scaling-stroke"/>
+    <line x1="${Xp}" y1="0" x2="${Xc}" y2="60" stroke="var(--accent)" stroke-width="2.5" vector-effect="non-scaling-stroke"/>`;
+  const near=(a,b)=>Math.abs(a-b)<0.07;
+  const tc=tier(c)[1], Lo=GATE.lo, Hi=GATE.hi;
+  $('cConf').innerHTML=
+   `<div class="band" style="left:0;width:${L(Lo)};background:var(--bad)"></div>
+    <div class="band" style="left:${L(Lo)};width:${L(Hi-Lo)};background:var(--warn)"></div>
+    <div class="band" style="left:${L(Hi)};width:${L(1-Hi)};background:var(--good)"></div>
+    <div class="tick b" style="left:0"></div><div class="tlab" style="left:0%;color:var(--base)">0</div>
+    <div class="tick" style="left:100%"></div><div class="tlab" style="left:100%">1</div>
+    <div class="thr" style="left:${L(Lo)}" title="Low / Medium boundary"></div><div class="tlab" style="left:${L(Lo)}">${Lo}</div>
+    <div class="thr" style="left:${L(Hi)}" title="Medium / High boundary"></div><div class="tlab" style="left:${L(Hi)}">${Hi}</div>
+    <div class="bname lo${tc==='lo'?' on':''}" style="left:${L(Lo/2)}">Low</div>
+    <div class="bname mid${tc==='mid'?' on':''}" style="left:${L((Lo+Hi)/2)}">Medium</div>
+    <div class="bname hi${tc==='hi'?' on':''}" style="left:${L((Hi+1)/2)}">High</div>
+    <div class="tick a" style="left:${L(c)};height:28px;top:-4px;border-left-width:3px"></div>
+    <div class="clab ${tc}" style="left:${L(Math.min(Math.max(c,0.09),0.91))}">${IN(R(mt('confidence'),mo('='),mn(f2(c))))}</div>`;
+  const alt=[...p].sort((a,b)=>b-a);
+  const ord=p.map((x,i)=>i).sort((a,b)=>p[b]-p[a]);
+  const fbox=(cap,math,k)=>`<div class="fbox${k?' '+k:''}"><span>${cap}</span>${IN(math)}</div>`;
+  const ratio=alt[1]>0?(alt[0]/alt[1]).toFixed(2):'∞';
+  if(P==='t-'){
+   $('cFacts').innerHTML=`<div class="frowlab">Inputs to the confidence formula</div><div class="fboxes">`
+    +fbox('options',R(mi('n'),mo('='),mn(n)))
+    +fbox('ignorance floor',R(mn(1),mo('/'),mi('n'),mo('='),mn(f3(floor),'kb')),'kb')
+    +fbox('top probability',R(PMAX(),mo('='),mn(f2(pm),'ka')),'ka')+`</div>`
+    +`<div class="frowlab">What Jev returns</div><div class="fboxes">`
+    +fbox('choice',R(mt('"'+C.names[ord[0]]+'"','sc')),'ks')
+    +fbox('confidence',R(mn(f3(c),'res')),'kc '+tier(c)[1])+`</div>`
+    +`<div class="frowlab">Your code can compute</div><div class="fboxes">`
+    +fbox('top-to-second ratio',R(PMAX(),mo('/'),SUB('p',mt('2nd')),mo('='),mn(ratio)),'mine')+`</div>`;
+   const cap=$('cCap'); if(cap) cap.classList.toggle('off',!(n===3&&C.names.join()==='shipping,billing,returns'&&Math.abs(p[2]-.61)<.005&&Math.abs(p[1]-.35)<.005));
+  } else
+  $('cFacts').innerHTML=`<div class="fboxes">`
+   +fbox('options',R(mi('n'),mo('='),mn(n)))
+   +fbox('ignorance floor',R(mn(1),mo('/'),mi('n'),mo('='),mn(f3(floor),'kb')),'kb')
+   +fbox('top · '+C.names[ord[0]],R(PMAX(),mo('='),mn(f2(pm),'ka')),'ka')
+   +fbox('top-to-second ratio',R(PMAX(),mo('/'),SUB('p',mt('2nd')),mo('='),mn(ratio)))
+   +fbox('confidence',R(mn(f3(c),'res')),'kc '+tier(c)[1])
+   +`</div>`;
+  $('cCalc').innerHTML=
+   BLOCK(R(CONF,mo('='),FR(R(PMAX('ka'),mo('−'),FR(mn(1),mi('n','kb'))),R(mn(1),mo('−'),FR(mn(1),mi('n','kb')))),mo('='),mn(f3(c),'res')))
+   +`<div class="alt"><span>Alternatives</span>${IN(R(mt('top probability'),mspace(),PMAX(),mo('='),mn(f2(pm))))}${IN(R(mt('top-to-second'),mspace(),FR(PMAX(),SUB('p',mt('2nd'))),mo('='),FR(mn(f2(alt[0])),mn(f2(alt[1]))),mo('='),mn(ratio)))}</div>`;
+  $('cOut').textContent=f2(c);
+  setTier($('cPill'),$('cMsg'),c);
+  if(apiEl) renderApi(apiEl,C,c);
+}
+ $('fChoice').innerHTML=BLOCK(R(CONF,mo('='),FR(R(PMAX('ka'),mo('−'),FR(mn(1),mi('n','kb'))),R(mn(1),mo('−'),FR(mn(1),mi('n','kb'))))));
+ presetButtons('data-cp',cPresets,C,renderChoice,scope);
+ countButtons('data-cn',C,renderChoice,2,8,n=>'Option '+(extraNames[n-3]||n),scope);
+ renderChoice();
+}
+
+
+// ---------- API request / response card ----------
+const DOCS_STATE='Shoes arrived two weeks late and in the wrong size. Also I see two charges of $120 on my card. What are you going to do about this?';
+const DOCS_CRIT={returns:'Exchanges, wrong or damaged items',shipping:'Delivery status, delays, lost packages',billing:'Charges, invoices, payment problems'};
+const esc=t=>t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+function hlJSON(t){return esc(t).replace(/("(?:[^"\\]|\\.)*")(\s*:)?|\b(-?\d+(?:\.\d+)?)\b/g,(m,str,colon,num)=>str?(colon?`<span class="k">${str}</span>${colon}`:`<span class="s">${str}</span>`):`<span class="n">${num}</span>`);}
+function hlPy(t){return t.split('\n').map(line=>{
+  const ci=line.indexOf('#'); let code=ci>=0?line.slice(0,ci):line, com=ci>=0?line.slice(ci):'';
+  code=esc(code).replace(/("(?:[^"\\]|\\.)*")|\b(from|import|with|as|if|elif|else|for|in|def|return|and|or|not|None|float)\b|\b(\d+(?:\.\d+)?)\b/g,(m,str,kw,num)=>str?`<span class="s">${str}</span>`:kw?`<span class="kw">${kw}</span>`:`<span class="n">${num}</span>`);
+  return code+(com?`<span class="c">${esc(com)}</span>`:'');}).join('\n');}
+function initApi(el){
+  el._view='req';
+  el.querySelectorAll('.ctabs [role=tab]').forEach(b=>b.addEventListener('click',()=>{el._view=b.dataset.v;el.querySelectorAll('.ctabs [role=tab]').forEach(x=>x.setAttribute('aria-selected',x===b));el._draw&&el._draw();}));
+  el.querySelector('.copy').addEventListener('click',e=>{const btn=e.currentTarget,txt=el._raw||'';
+    const done=()=>{btn.textContent='Copied';setTimeout(()=>btn.textContent='Copy',1400)};
+    try{navigator.clipboard.writeText(txt).then(done,()=>{selectCode(el)})}catch(err){selectCode(el)}});
+}
+function selectCode(el){const r=document.createRange();r.selectNodeContents(el.querySelector('pre code'));const s=getSelection();s.removeAllRanges();s.addRange(r);}
+function renderApi(el,C,conf){
+  const names=C.names, p=C.p, docs=names.every(n=>DOCS_CRIT[n]);
+  const ord=p.map((x,i)=>i).sort((a,b)=>p[b]-p[a]), top=names[ord[0]];
+  const p1=p[ord[0]], p2=p[ord[1]]||0, ratio=p2>0?p1/p2:Infinity;
+  const r2=x=>Math.round(x*100)/100;
+  const crit={}; names.forEach(n=>crit[n]=DOCS_CRIT[n]||`Description of option ${n}`);
+  const state=docs?DOCS_STATE:'<the ticket text you want routed>';
+  const req={state,model:'jev-latest',questions:{department:{type:'choice',instructions:'Which team should handle this?',criteria:crit}}};
+  const probs={}; names.forEach((n,i)=>probs[n]=r2(p[i]));
+  const res={model:'jev-1.13.0',answers:{department:{type:'choice',choice:top,confidence:r2(conf),probabilities:probs}},usage:{input_tokens:341,output_tokens:36}};
+  if(!docs) delete res.usage;
+  const fj=o=>JSON.stringify(o,null,2).replace(/("(?!input_tokens|output_tokens)[^"]+": )(0|1)(?=,?\n)/g,'$1$2.0');
+  const py=`from typesafe_sdk import Choice, TypeSafeClient
+
+client = TypeSafeClient()  # reads TYPESAFE_API_KEY from the environment
+
+response = client.system_one(
+    state=${JSON.stringify(state)},
+    questions={
+        "department": Choice(
+            instructions="Which team should handle this?",
+            criteria={
+${names.map(n=>`                ${JSON.stringify(n)}: ${JSON.stringify(crit[n])},`).join('\n')}
+            },
+        ),
+    },
+)`;
+  const decision=conf<GATE.lo?'route_to_human':(conf<GATE.hi||ratio<2)?'ask_user_to_confirm':'route_to';
+  const why=conf<GATE.lo?`confidence ${r2(conf)} < ${GATE.lo}`:conf<GATE.hi?`confidence ${r2(conf)} < ${GATE.hi}`:ratio<2?`ratio ${ratio.toFixed(2)} < 2, close race`:`confidence ${r2(conf)} ≥ ${GATE.hi} and ratio ${isFinite(ratio)?ratio.toFixed(2):'∞'} ≥ 2`;
+  const use=`ans = response.answers["department"]          # returned by Jev
+# ans.choice      = ${JSON.stringify(top)}
+# ans.confidence  = ${r2(conf)}
+# ans.probabilities = ${JSON.stringify(probs)}
+
+# Computed by YOUR code: the API does not return these
+probs = sorted(ans.probabilities.values(), reverse=True)
+p_max, p_2nd = probs[0], probs[1]                          # ${r2(p1)}, ${r2(p2)}
+ratio = p_max / p_2nd if p_2nd > 0 else float("inf")      # ${isFinite(ratio)?ratio.toFixed(2):'inf'}
+
+# Illustrative gate: ${GATE.lo} / ${GATE.hi} on confidence, 2 on the ratio
+if ans.confidence < ${GATE.lo}:
+    route_to_human(ticket)
+elif ans.confidence < ${GATE.hi} or ratio < 2:
+    ask_user_to_confirm(ans.choice)
+else:
+    route_to(ans.choice)
+
+# With the bars above: ${decision}(...)  because ${why}`;
+  const views={
+    req:{meta:'POST https://api.typesafe.ai/v1/systemone · Authorization: Bearer $TYPESAFE_API_KEY',raw:JSON.stringify(req,null,2),hl:hlJSON,
+      note:docs?'Request body from the TypeSafe docs’ ticket-routing example. Each criteria key becomes one option; its text tells Jev what the option means.':'The option names follow the bars above; the state and descriptions are placeholders.'},
+    sdk:{meta:'Python · pip install typesafe-sdk (Python ≥ 3.10)',raw:py,hl:hlPy,note:'The same request through TypeSafe’s Python SDK. The SDK builds the JSON body and handles the endpoint and API key.'},
+    res:{meta:'200 OK · application/json',raw:fj(res),hl:hlJSON,
+      note:'Shaped like the docs’ response; the numbers mirror the bars above, so this is a simulated answer. Jev returns choice, confidence and probabilities. It does not return p_2nd or the top-to-second ratio: your code works those out.'},
+    use:{meta:'Python · what you write after the call',raw:use,hl:hlPy,note:'The ratio is two lines of client code over the returned probabilities. The 0.5 / 0.7 and ratio-2 cut-offs are illustrative; set your own from risk and data.'}
+  };
+  el._draw=()=>{const v=views[el._view]; el._raw=v.raw; el.querySelector('.cmeta').textContent=v.meta; el.querySelector('pre code').innerHTML=v.hl(v.raw); el.querySelector('.apinote').textContent=v.note;};
+  el._draw();
+}
+
+
+// ---------- SCORE tab (mountable) ----------
+const SEV5=['Cosmetic','Minor','Major','Critical','Blocker'];
+const SEV5_DESC=['Cosmetic; no impact to functionality','Minor; small inconvenience, easy workaround','Major; important feature degraded, workaround exists','Critical; core feature broken for many users, no good workaround','Blocker; product unusable or data at risk, no workaround'];
+const SEV5_STATE='Since this morning’s release, checkout fails for some customers with a payment error. Others can still pay by switching to PayPal.';
+const kPresets={next:[SEV5,[0,0,0,.4,.6]],two:[SEV5,[0,0,.4,0,.6]],far:[SEV5,[.4,0,0,0,.6]],clear:[SEV5,[0,0,0,.05,.95]],
+  spread:[SEV5,[.05,.2,.5,.2,.05]],tie:[SEV5,[0,0,.4,.4,.2]],
+  docs:[['Cosmetic','Workaround exists','Blocking'],[0,.89,.11]],split:[['Cosmetic','Workaround exists','Blocking'],[0,.57,.43]],
+  adj:[['Cosmetic','Workaround exists','Blocking'],[0,.5,.5]],ends:[['Cosmetic','Workaround exists','Blocking'],[.5,0,.5]]};
+const DOCS_LEVELS=['Cosmetic; no impact to functionality','Broken or degraded feature, but workaround exists','Blocking issue; no workaround exists'];
+const SHORT_LEVELS=['Cosmetic','Workaround exists','Blocking'];
+const DOCS_BUG='Export to PDF fails with a spinner that never finishes. Some of our team say CSV export still works for them, others say it fails too.';
+function scoreStats(p){
+  const n=p.length, m=argmax(p);
+  const d=p.reduce((s,x,i)=>s+x*Math.abs(i-m),0);
+  const mad=[...Array(n).keys()].reduce((s,i)=>s+Math.abs(i-(n-1)/2),0)/n;
+  const raw=1-d/mad, c=Math.max(0,raw), ev=p.reduce((s,x,i)=>s+i*x,0);
+  const ties=p.filter(x=>Math.abs(x-p[m])<1e-9).length>1;
+  return {n,m,d,mad,raw,c,ev,ties,choiceC:(p[m]-1/n)/(1-1/n)};
+}
+function mountScore(PFX){
+  const S={names:[...SEV5],p:[0,0,0,.4,.6]};
+  const $=id=>document.getElementById(PFX+id);
+  const scope=$('score'), apiEl=$('api');
+  if(apiEl) initApi(apiEl);
+  const lab=(i,m,x)=>`${i} · ${S.names[i]}<small>distance <b>${Math.abs(i-m)}</b> · adds <b>${f2(x*Math.abs(i-m))}</b></small>`;
+  function render(rebuild=true){
+    const p=S.p, st=scoreStats(p), {n,m,d,mad,raw,c,ev}=st;
+    if(rebuild){$('sRows').innerHTML=rowsHTML(PFX+'s',p.map((x,i)=>lab(i,m,x)),p,m);bindRows(PFX+'sRows',S,render);}
+    else{updateRows(PFX+'sRows',p,m);scope.querySelectorAll('#'+PFX+'sRows label').forEach((el,i)=>{el.innerHTML=lab(i,m,p[i])});}
+    const L=x=>(x*100)+'%';
+    // spread ruler: 0 .. 2*MAD ; beyond MAD is clamped
+    const span=2*mad, X=v=>Math.min(v,span)/span, xm=X(mad), xd=X(d);
+    $('sRuler').innerHTML=`<div class="axis"></div>
+      <div class="void" style="left:${L(xm)};width:${L(1-xm)}"></div><div class="vlab" style="left:${L(xm)};max-width:${L(1-xm)}">worse than uniform → 0</div>
+      <div class="span" style="left:0;width:${L(xm)}"></div>
+      <div class="seg" style="left:0;width:${L(xd)}"></div>
+      <div class="tick" style="left:0"></div><div class="lab" style="left:0%">0</div>
+      <div class="tick b" style="left:${L(xm)}"></div><div class="lab" style="left:${L(xm)};color:var(--base)">${IN(R(MAD,mo('='),mn(f3(mad))))}</div>
+      <div class="tick" style="left:100%"></div><div class="lab" style="left:100%">${f2(span)}</div>
+      <div class="tick a" style="left:${L(xd)}"></div><div class="lab t" style="left:${L(Math.min(Math.max(xd,0.1),0.9))};color:var(--accent)">${IN(R(mi('d'),mo('='),mn(f3(d))))}${d>span?' →':''}</div>`;
+    // flipped linear map: d=0 -> conf 1 (right), d=MAD -> conf 0 (left), beyond -> 0
+    const Xm=xm*100, Xd=xd*100, Xc=c*100;
+    $('sMap').innerHTML=`<polygon points="0,0 ${Xm},0 0,60 100,60" fill="var(--accent)" opacity=".08"/>
+      <line x1="0" y1="0" x2="100" y2="60" stroke="var(--muted)" stroke-width="1.5" stroke-dasharray="4 3" vector-effect="non-scaling-stroke"/>
+      <line x1="${Xm}" y1="0" x2="0" y2="60" stroke="var(--base)" stroke-width="1.5" stroke-dasharray="4 3" vector-effect="non-scaling-stroke"/>
+      <line x1="${Xd}" y1="0" x2="${Xc}" y2="60" stroke="var(--accent)" stroke-width="2.5" vector-effect="non-scaling-stroke"/>`;
+    const tc=tier(c)[1], Lo=GATE.lo, Hi=GATE.hi;
+    $('sConf').innerHTML=`<div class="band" style="left:0;width:${L(Lo)};background:var(--bad)"></div>
+      <div class="band" style="left:${L(Lo)};width:${L(Hi-Lo)};background:var(--warn)"></div>
+      <div class="band" style="left:${L(Hi)};width:${L(1-Hi)};background:var(--good)"></div>
+      <div class="tick b" style="left:0"></div><div class="tlab" style="left:0%;color:var(--base)">0</div>
+      <div class="tick" style="left:100%"></div><div class="tlab" style="left:100%">1</div>
+      <div class="thr" style="left:${L(Lo)}"></div><div class="tlab" style="left:${L(Lo)}">${Lo}</div>
+      <div class="thr" style="left:${L(Hi)}"></div><div class="tlab" style="left:${L(Hi)}">${Hi}</div>
+      <div class="bname lo${tc==='lo'?' on':''}" style="left:${L(Lo/2)}">Low</div>
+      <div class="bname mid${tc==='mid'?' on':''}" style="left:${L((Lo+Hi)/2)}">Medium</div>
+      <div class="bname hi${tc==='hi'?' on':''}" style="left:${L((Hi+1)/2)}">High</div>
+      <div class="tick a" style="left:${L(c)};height:28px;top:-4px;border-left-width:3px"></div>
+      <div class="clab ${tc}" style="left:${L(Math.min(Math.max(c,0.09),0.91))}">${IN(R(mt('confidence'),mo('='),mn(f2(c))))}</div>`;
+    const fbox=(cap,math,k)=>`<div class="fbox${k?' '+k:''}"><span>${cap}</span>${IN(math)}</div>`;
+    $('sFacts').innerHTML=`<div class="frowlab">Inputs to the confidence formula</div><div class="fboxes">`
+      +fbox('levels',R(mi('n'),mo('='),mn(n)))
+      +fbox('ignorance spread',R(MAD,mo('='),mn(f3(mad),'kb')),'kb')
+      +fbox('peak · '+S.names[m]+(st.ties?' (tie)':''),R(mi('m'),mo('='),mn(m,'ka')),'ka')
+      +fbox('expected distance',R(mi('d'),mo('='),mn(f3(d))))+`</div>`
+      +`<div class="frowlab">What Jev returns</div><div class="fboxes">`
+      +fbox('score · average level',R(mn(f2(ev),'sc'),mspace(),mt('of '+(n-1))),'ks')
+      +fbox('confidence',R(mn(f3(c),'res')),'kc '+tc)+`</div>`;
+    $('sCalc').innerHTML=BLOCK(R(CONF,mo('='),mi('max'),P(R(mn(0),mo(','),mspace(),mn(1),mo('−'),FR(mn(f3(d),'ka'),mn(f3(mad),'kb')))),mo('='),mn(f3(c),'res')))
+      +(raw<0?`<div class="alt"><span>Clamped</span>${IN(R(mn(1),mo('−'),FR(mn(f3(d)),mn(f3(mad))),mo('='),mn(f3(raw))))}<span style="text-transform:none;letter-spacing:0">is below 0, so confidence is set to 0</span></div>`:'')
+      +`<div class="alt"><span>Score field</span>${IN(R(mt('score'),mo('='),SUM(mi('i')),mi('i'),mo('·'),SUB('p',mi('i')),mo('='),mn(f2(ev))))}${IN(R(mt('normalised'),mspace(),FR(mt('score'),R(mi('n'),mo('−'),mn(1))),mo('='),mn(f2(ev/(n-1)))))}</div>`
+      +`<div class="alt"><span>Compare</span>${IN(R(mt('Choice formula on the same numbers'),mo('='),mn(f3(st.choiceC))))}</div>`;
+    const isDocs=S.p.length===3&&S.names.every((x,i)=>x===SHORT_LEVELS[i])&&Math.abs(S.p[1]-.89)<.005&&Math.abs(S.p[2]-.11)<.005;
+    $('sCap').classList.toggle('off',!isDocs);
+    drawScoreBar($('sScore'),S,st);
+    $('sOut').textContent=f2(c);
+    setTier($('sPill'),$('sMsg'),c);
+    if(apiEl) renderScoreApi(apiEl,S,st);
+  }
+  presetButtons('data-kp',kPresets,S,render,scope);
+  countButtons('data-kn',S,render,2,10,n=>'Level '+n,scope);
+  render();
+}
+
+function drawScoreBar(el,S,st){
+  const n=S.p.length, X=i=>(n>1?i/(n-1):0)*100, key=S.names.join('|');
+  if(el._key!==key){
+    el._key=key;
+    el.innerHTML=`<div class="sbaxis"></div>`
+      +S.names.map((nm,i)=>`<div class="sbcol" style="left:${X(i)}%"><div class="sbb"><i></i></div><div class="sbtick"></div><span class="sbn">${i}</span><span class="sbl">${nm}</span></div>`).join('')
+      +`<div class="sbmark"><div class="sbline"></div><div class="sbtri"></div><div class="sblab"></div></div>`;
+  }
+  el.querySelectorAll('.sbcol').forEach((col,i)=>{col.classList.toggle('pk',i===st.m);col.querySelector('.sbb i').style.height=(S.p[i]*100)+'%';});
+  const mk=el.querySelector('.sbmark'), pos=X(st.ev);
+  mk.style.left=pos+'%';
+  const gap=Math.abs(st.ev-st.m), lab=mk.querySelector('.sblab');
+  lab.innerHTML=`score <b>${f2(st.ev)}</b> <em>· normalised ${f2(st.ev/(n-1))}</em>`+(gap>=0.75?`<span class="sbwarn">${f2(gap)} levels from the peak</span>`:'');
+  lab.style.transform=`translateX(${pos<20?'-8%':pos>80?'-92%':'-50%'})`;
+  mk.classList.toggle('far',gap>=0.75);
+}
+function renderScoreApi(el,S,st){
+  const n=S.p.length, docs=n===3&&S.names.every((x,i)=>x===SHORT_LEVELS[i]), sev=n===5&&S.names.every((x,i)=>x===SEV5[i]);
+  const crit=S.names.map((x,i)=>docs?DOCS_LEVELS[i]:sev?SEV5_DESC[i]:`Level ${i}: ${x}`);
+  const state=docs?DOCS_BUG:sev?SEV5_STATE:'<the text you want rated>';
+  const r2=x=>Math.round(x*100)/100;
+  const req={state,model:'jev-latest',questions:{bug_severity:{type:'score',instructions:'How severe is the reported issue?',criteria:crit}}};
+  const legend={},probs={}; crit.forEach((t,i)=>{legend[i]=t;probs[i]=r2(S.p[i])});
+  const res={model:'jev-1.13.0',answers:{bug_severity:{type:'score',score:r2(st.ev),confidence:r2(st.c),legend,probabilities:probs}},usage:{input_tokens:332,output_tokens:18}};
+  if(!docs) delete res.usage;
+  const fj=o=>JSON.stringify(o,null,2).replace(/("(?!input_tokens|output_tokens)[^"]+": )(\d+)(?=,?\n)/g,'$1$2.0');
+  const py=`from typesafe_sdk import Score, TypeSafeClient
+
+client = TypeSafeClient()  # reads TYPESAFE_API_KEY from the environment
+
+criteria = [
+${crit.map(t=>'    '+JSON.stringify(t)+',').join('\n')}
+]
+
+response = client.system_one(
+    state=${JSON.stringify(state)},
+    questions={
+        "bug_severity": Score(
+            instructions="How severe is the reported issue?",
+            criteria=criteria,
+        ),
+    },
+)`;
+  const top=n-1, norm=st.ev/top, peakLabel=S.names[st.m];
+  const dec=st.c<GATE.lo?'triage_by_human':(st.m===top&&st.c>=GATE.hi)?'page_on_call':'add_to_backlog';
+  const why=st.c<GATE.lo?`confidence ${r2(st.c)} < ${GATE.lo}: the score ${r2(st.ev)} averages levels that disagree`:(st.m===top&&st.c>=GATE.hi)?`peak is the top level and confidence ${r2(st.c)} ≥ ${GATE.hi}`:`peak "${peakLabel}", priority ${norm.toFixed(2)}`;
+  const use=`ans = response.answers["bug_severity"]          # returned by Jev
+# ans.score       = ${r2(st.ev)}   (average level, 0 to ${top})
+# ans.confidence  = ${r2(st.c)}
+# ans.probabilities = ${JSON.stringify(probs)}
+
+# Computed by YOUR code
+top_level = len(criteria) - 1                             # ${top}
+severity  = ans.score / top_level                         # ${norm.toFixed(2)}  (docs' normalisation)
+peak = int(max(ans.probabilities, key=ans.probabilities.get))   # ${st.m}
+
+# Illustrative gate: ${GATE.lo} / ${GATE.hi} on confidence
+if ans.confidence < ${GATE.lo}:
+    triage_by_human(bug)          # spread out: don't trust the average
+elif peak == top_level and ans.confidence >= ${GATE.hi}:
+    page_on_call(bug)
+else:
+    add_to_backlog(bug, priority=severity)
+
+# With the bars above: ${dec}(...)  because ${why}`;
+  const views={
+    req:{meta:'POST https://api.typesafe.ai/v1/systemone · Authorization: Bearer $TYPESAFE_API_KEY',raw:JSON.stringify(req,null,2),hl:hlJSON,
+      note:docs?'Score criteria are an ordered list: the first item is level 0, the next level 1, and so on. Text and levels follow the docs’ bug-severity example.':sev?'Score criteria are an ordered list: the first item is level 0. The 5-level severity wording and the ticket text are illustrative, written for this page, not taken from the docs.':'The level names follow the bars above; the state and descriptions are placeholders.'},
+    sdk:{meta:'Python · pip install typesafe-sdk (Python ≥ 3.10)',raw:py,hl:hlPy,note:'The same request through TypeSafe’s Python SDK.'},
+    res:{meta:'200 OK · application/json',raw:fj(res),hl:hlJSON,
+      note:'Shaped like the docs’ response; the numbers mirror the bars above, so this is a simulated answer. Score answers carry score, confidence, a legend of level texts, and probabilities keyed by level number.'},
+    use:{meta:'Python · what you write after the call',raw:use,hl:hlPy,note:'Dividing by the top level is the docs’ own advice for putting scores on 0 to 1. Read score and confidence together: a middle score with low confidence is disagreement, not a middle answer. The cut-offs are illustrative.'}
+  };
+  el._draw=()=>{const v=views[el._view]; el._raw=v.raw; el.querySelector('.cmeta').textContent=v.meta; el.querySelector('pre code').innerHTML=v.hl(v.raw); el.querySelector('.apinote').textContent=v.note;};
+  el._draw();
+}
+
+
+
+document.addEventListener('click',e=>{const b=e.target.closest('.golink');if(!b)return;
+  const t=document.querySelector(`.tabs [data-tab="${b.dataset.goto}"]`);if(t)t.click();
+  const a=b.dataset.anchor&&document.getElementById(b.dataset.anchor);if(a)setTimeout(()=>a.scrollIntoView({behavior:'smooth',block:'start'}),60);});
+// ---------- NOUL tab ----------
+const NOUL_REC=[['Thanks, that fixed it!',0.02],['How do I reset my password?',0.07],['I need this sorted today, whatever it takes.',0.26],['Are you a bot?',0.40],['Is there any way to speak to someone about my invoice?',0.84],['I have asked three times now. Can I please just talk to a real person?',0.99]];
+function mountNoul(){
+  const $=id=>document.getElementById('u-'+id), scope=$('noul');
+  const pS=$('p'), tS=$('t'), apiEl=$('api'); if(apiEl) initApi(apiEl);
+  let preset=4;
+  function render(){
+    const p=+pS.value, t=+tS.value, c=Math.abs(2*p-1), yes=p>=t, L=x=>(x*100)+'%';
+    $('pF').style.width=L(p); $('pV').textContent=f2(p); $('tF').style.width=L(t); $('tV').textContent=f2(t);
+    const rec=preset!=null&&Math.abs(NOUL_REC[preset][1]-p)<0.005;
+    $('cap').classList.toggle('off',!rec); if(preset!=null) $('capq').textContent=NOUL_REC[preset][0]; $('qval').textContent=f2(p)+(rec?'':' (moved)');
+    $('ruler').innerHTML=`<div class="axis"></div>
+      <div class="span" style="left:0;width:50%;background:var(--bad);opacity:.12"></div><div class="span" style="left:50%;width:50%;background:var(--good);opacity:.12"></div>
+      <div class="tick" style="left:0"></div><div class="lab" style="left:0%;transform:none">0 · no</div>
+      <div class="tick b" style="left:50%"></div><div class="lab t" style="left:50%;color:var(--base)">coin flip ${IN(R(FR(mn(1),mn(2))))}</div>
+      <div class="tick" style="left:100%"></div><div class="lab" style="left:100%;transform:translateX(-100%)">yes · 1</div>
+      <div class="thrt" style="left:${L(t)}"><span>t = ${f2(t)}</span></div>
+      <div class="tick a" style="left:${L(p)};border-left-width:3px"></div><div class="lab t" style="left:${L(Math.min(Math.max(p,0.1),0.9))};color:var(--accent)">${IN(R(mi('p'),mo('='),mn(f2(p))))}</div>`;
+    const Xp=p*100, Xc=c*100;
+    $('map').innerHTML=`<polygon points="0,0 50,0 0,60 100,60" fill="var(--accent)" opacity=".06"/><polygon points="50,0 100,0 100,60 0,60" fill="var(--accent)" opacity=".06"/>
+      <line x1="0" y1="0" x2="100" y2="60" stroke="var(--muted)" stroke-width="1.5" stroke-dasharray="4 3" vector-effect="non-scaling-stroke"/>
+      <line x1="100" y1="0" x2="100" y2="60" stroke="var(--muted)" stroke-width="1.5" stroke-dasharray="4 3" vector-effect="non-scaling-stroke"/>
+      <line x1="50" y1="0" x2="0" y2="60" stroke="var(--base)" stroke-width="1.5" stroke-dasharray="4 3" vector-effect="non-scaling-stroke"/>
+      <line x1="${Xp}" y1="0" x2="${Xc}" y2="60" stroke="var(--accent)" stroke-width="2.5" vector-effect="non-scaling-stroke"/>`;
+    const tc=tier(c)[1], Lo=GATE.lo, Hi=GATE.hi;
+    $('conf').innerHTML=`<div class="band" style="left:0;width:${L(Lo)};background:var(--bad)"></div>
+      <div class="band" style="left:${L(Lo)};width:${L(Hi-Lo)};background:var(--warn)"></div>
+      <div class="band" style="left:${L(Hi)};width:${L(1-Hi)};background:var(--good)"></div>
+      <div class="tick b" style="left:0"></div><div class="tlab" style="left:0%;color:var(--base)">0</div>
+      <div class="tick" style="left:100%"></div><div class="tlab" style="left:100%">1</div>
+      <div class="thr" style="left:${L(Lo)}"></div><div class="tlab" style="left:${L(Lo)}">${Lo}</div>
+      <div class="thr" style="left:${L(Hi)}"></div><div class="tlab" style="left:${L(Hi)}">${Hi}</div>
+      <div class="bname lo${tc==='lo'?' on':''}" style="left:${L(Lo/2)}">Low</div>
+      <div class="bname mid${tc==='mid'?' on':''}" style="left:${L((Lo+Hi)/2)}">Medium</div>
+      <div class="bname hi${tc==='hi'?' on':''}" style="left:${L((Hi+1)/2)}">High</div>
+      <div class="tick a" style="left:${L(c)};height:28px;top:-4px;border-left-width:3px"></div>
+      <div class="clab ${tc}" style="left:${L(Math.min(Math.max(c,0.09),0.91))}">${IN(R(mt('confidence'),mo('='),mn(f2(c))))}</div>`;
+    const fbox=(cap,math,k)=>`<div class="fbox${k?' '+k:''}"><span>${cap}</span>${IN(math)}</div>`;
+    $('facts').innerHTML=`<div class="frowlab">What Jev returns</div><div class="fboxes">`
+      +fbox('noul · yes probability',R(mn(f2(p),'sc')),'ks')+`</div>`
+      +`<div class="frowlab">Your code computes</div><div class="fboxes">`
+      +fbox('ignorance point',R(mn('0.5','kb')),'kb')
+      +fbox('threshold',R(mi('t'),mo('='),mn(f2(t))))
+      +fbox('decision',R(mt(yes?'yes':'no','sc')),'kc '+(yes?'hi':'lo'))
+      +fbox('margin from threshold',R(mi('p'),mo('−'),mi('t'),mo('='),mn((p-t>=0?'+':'')+f2(p-t))))
+      +fbox('confidence · optional',R(mn(f2(c),'res')),'kc '+tc)+`</div>`;
+    $('calc').innerHTML=BLOCK(R(CONF,mo('='),ABS(R(mn(2),mo('·'),mn(f2(p),'ka'),mo('−'),mn(1))),mo('='),ABS(mn(f2(2*p-1))),mo('='),mn(f2(c),'res')))
+      +`<div class="alt"><span>Decision</span>${IN(R(mi('p'),mo(yes?'≥':'&lt;'),mi('t'),mspace(),mo('⟹'),mspace(),mt(yes?'yes':'no')))}${IN(R(mn(f2(p)),mo(yes?'≥':'&lt;'),mn(f2(t))))}</div>`
+      +`<div class="alt"><span>Same as Choice, n = 2</span>${IN(R(FR(R(mi('max'),P(R(mn(f2(p)),mo(','),mn(f2(1-p)))),mo('−'),mn('0.5')),mn('0.5')),mo('='),mn(f2(c))))}</div>`;
+    $('out').textContent=yes?'YES':'NO'; $('out').className='big '+(yes?'yesv':'nov');
+    const pill=$('pill'); pill.textContent='confidence '+f2(c); pill.className='pill '+tc;
+    $('msg').textContent=`noul ${f2(p)} ${yes?'≥':'<'} threshold ${f2(t)}: ${yes?'hand to a person':'keep with the bot'}. ${Math.abs(p-t)<0.1?'Close to the threshold: a small change flips the decision.':''}`;
+    if(apiEl) renderNoulApi(apiEl,p,t,c,rec?NOUL_REC[preset][0]:null);
+  }
+  scope.querySelectorAll('[data-up]').forEach(b=>b.addEventListener('click',()=>{preset=+b.dataset.up;pS.value=NOUL_REC[preset][1];scope.querySelectorAll('[data-up]').forEach(x=>x.classList.toggle('on',x===b));render();}));
+  scope.querySelectorAll('[data-ut]').forEach(b=>b.addEventListener('click',()=>{tS.value=b.dataset.ut;scope.querySelectorAll('[data-ut]').forEach(x=>x.classList.toggle('on',x===b));render();}));
+  pS.addEventListener('input',()=>{scope.querySelectorAll('[data-up]').forEach(x=>x.classList.remove('on'));render();});
+  tS.addEventListener('input',()=>{scope.querySelectorAll('[data-ut]').forEach(x=>x.classList.remove('on'));render();});
+  render();
+}
+function renderNoulApi(el,p,t,c,msg){
+  const r2=x=>Math.round(x*100)/100, state=msg||'<the conversation text>';
+  const req={state,model:'jev-latest',questions:{is_human_escalation:{type:'noul',instructions:'Is the customer asking for a human agent?'}}};
+  const crit={state:'<the conversation text>',model:'jev-latest',questions:{is_repeat_contact:{type:'noul',instructions:'Has the customer contacted support about this before?',criteria:{true:'Mentions a prior attempt, ticket, or that they have asked before',false:'No sign of any previous contact'}}}};
+  const res={model:'jev-1.13.0',answers:{is_human_escalation:{type:'noul',noul:r2(p)}}};
+  const fj=o=>JSON.stringify(o,null,2).replace(/("noul": )(\d+)(?=,?\n)/g,'$1$2.0');
+  const py=`from typesafe_sdk import Noul, TypeSafeClient
+
+client = TypeSafeClient()  # reads TYPESAFE_API_KEY from the environment
+
+response = client.system_one(
+    state=${JSON.stringify(state)},
+    questions={
+        "is_human_escalation": Noul(
+            instructions="Is the customer asking for a human agent?",
+        ),
+    },
+)`;
+  const yes=p>=t;
+  const use=`p = response.answers["is_human_escalation"].noul   # ${r2(p)}, returned by Jev
+
+# Computed by YOUR code: the API returns only p
+THRESHOLD = ${r2(t)}   # set from the cost of being wrong
+confidence = abs(2 * p - 1)                            # ${f2(c)}, optional
+
+if p >= THRESHOLD:
+    hand_to_human(conversation)
+else:
+    keep_with_bot(conversation)
+
+# With the dial above: ${yes?'hand_to_human':'keep_with_bot'}(...)  because ${r2(p)} ${yes?'>=':'<'} ${r2(t)}
+
+# A checklist: ask one Noul per condition in the same request,
+# then combine in code, e.g.
+#   urgent = a["is_angry"].noul >= 0.7 and a["wants_refund"].noul >= 0.7`;
+  const views={
+    req:{meta:'POST https://api.typesafe.ai/v1/systemone · Authorization: Bearer $TYPESAFE_API_KEY',raw:JSON.stringify(req,null,2),hl:hlJSON,note:msg?'Request from the docs’ human-escalation example, with the selected message as the state. Instructions can be a question or a statement to judge.':'The state is a placeholder; pick a docs message above to fill it.'},
+    crit:{meta:'Optional criteria · docs example',raw:JSON.stringify(crit,null,2),hl:hlJSON,note:'criteria is optional: an object with true and false descriptions of what a yes and a no mean. Use it when the plain question leaves room for interpretation.'},
+    sdk:{meta:'Python · pip install typesafe-sdk (Python ≥ 3.10)',raw:py,hl:hlPy,note:'The same request through TypeSafe’s Python SDK.'},
+    res:{meta:'200 OK · application/json',raw:fj(res),hl:hlJSON,note:'A Noul answer is just type and noul. No confidence and no decision: the threshold lives in your code. The number mirrors the dial above.'},
+    use:{meta:'Python · what you write after the call',raw:use,hl:hlPy,note:'The threshold is the business decision. Raise it when a false yes is expensive, lower it when a missed yes is expensive.'}
+  };
+  el._draw=()=>{const v=views[el._view]; el._raw=v.raw; el.querySelector('.cmeta').textContent=v.meta; el.querySelector('pre code').innerHTML=v.hl(v.raw); el.querySelector('.apinote').textContent=v.note;};
+  el._draw();
+}
+
+function bindRows(id,state,render){
+  document.querySelectorAll('#'+id+' input').forEach(inp=>{
+    inp.addEventListener('input',e=>{ state.p=adjust(state.p,+e.target.dataset.i,+e.target.value); render(false,e.target); });
+  });
+}
+function updateRows(id,p,top){
+  document.querySelectorAll('#'+id+' .row').forEach((row,i)=>{
+    row.classList.toggle('top',i===top);
+    row.querySelector('.fill').style.width=(p[i]*100)+'%';
+    row.querySelector('.val').textContent=f2(p[i]);
+    const inp=row.querySelector('input'); if(document.activeElement!==inp) inp.value=p[i];
+  });
+}
+function presetButtons(attr,presets,state,render,scope=document){
+  scope.querySelectorAll(`[${attr}]`).forEach(b=>b.addEventListener('click',()=>{
+    const [names,p]=presets[b.getAttribute(attr)]; state.names=[...names]; state.p=[...p];
+    scope.querySelectorAll(`[${attr}]`).forEach(x=>x.classList.toggle('on',x===b)); render();
+  }));
+}
+function countButtons(attr,state,render,min,max,namer,scope=document){
+  scope.querySelectorAll(`[${attr}]`).forEach(b=>b.addEventListener('click',()=>{
+    const add=b.getAttribute(attr)==='+',n=state.p.length;
+    if(add&&n<max){ state.p=state.p.map(x=>x*n/(n+1)).concat(1/(n+1)); state.names.push(namer(n)); }
+    else if(!add&&n>min){ const last=state.p.pop(); const s=state.p.reduce((a,b)=>a+b,0); state.p=s>0?state.p.map(x=>x/s):state.p.map(()=>1/state.p.length); state.names.pop(); }
+    render();
+  }));
+}
+
+mountChoice('t-'); mountScore('k-'); mountNoul();
+
+// ================= TABS =================
+(function(){
+  const tabs=[...document.querySelectorAll('.tabs [role=tab]')];
+  function show(id,push){
+    tabs.forEach(t=>{const on=t.dataset.tab===id;t.setAttribute('aria-selected',on);t.tabIndex=on?0:-1;document.getElementById('tab-'+t.dataset.tab).hidden=!on;});
+    if(push){try{history.replaceState(null,'',id==='explainer'?location.pathname+location.search:'#'+id)}catch(e){}}
+    try{localStorage.setItem('jevTab',id)}catch(e){}
+  }
+  tabs.forEach((t,i)=>{t.addEventListener('click',()=>{show(t.dataset.tab,true);window.scrollTo({top:0})});
+    t.addEventListener('keydown',e=>{if(e.key==='ArrowRight'||e.key==='ArrowLeft'){const j=(i+(e.key==='ArrowRight'?1:-1)+tabs.length)%tabs.length;tabs[j].focus();tabs[j].click();}});});
+  let start='explainer';
+  if(location.hash==='#testbed') start='testbed'; if(location.hash==='#score') start='score'; if(location.hash==='#which') start='which'; if(location.hash==='#noul') start='noul';
+  show(start,false);
+})();
+
+</script>
+
+</body>
+</html>
